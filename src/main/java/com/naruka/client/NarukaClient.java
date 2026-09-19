@@ -19,6 +19,8 @@ import com.naruka.client.module.impl.KeepSprintModule;
 import com.naruka.client.module.impl.NoMissCooldownModule;
 import com.naruka.client.module.impl.ReachModule;
 import com.naruka.client.notification.NotificationManager;
+import com.naruka.client.rotation.RotationManager;
+import com.naruka.client.safety.FlagDetector;
 import com.naruka.client.setting.Setting;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -154,6 +156,8 @@ public class NarukaClient implements ClientModInitializer {
 		}
 
 		NotificationManager.tick();
+		FlagDetector.tick();
+		RotationManager.tick(client.player);
 		persistModuleSettings();
 		pollModuleKeybinds(client);
 		ModuleManager.tick();
