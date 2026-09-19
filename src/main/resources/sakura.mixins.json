@@ -1,0 +1,24 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "com.sakura.client.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"ClientPlayNetworkHandlerMixin",
+		"ClientPlayerEntityRotationMixin",
+		"CriticalsAttackMixin",
+		"CriticalsBlinkMixin",
+		"CriticalsNoGroundMixin",
+		"CriticalsTimerMixin",
+		"EntityTargetingMarginMixin",
+		"MinecraftClientAccessor",
+		"MinecraftClientAttackMixin",
+		"PlayerEntityAccessor",
+		"PlayerEntityKeepSprintMixin",
+		"PlayerEntityReachMixin",
+		"VelocityPacketMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

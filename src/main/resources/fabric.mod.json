@@ -1,8 +1,8 @@
 {
 	"schemaVersion": 1,
-	"id": "naruka",
+	"id": "sakura",
 	"version": "${version}",
-	"name": "Naruka Client",
+	"name": "Sakura Client",
 	"description": "Glassmorphism-styled client GUI, HUD and utilities for Minecraft 1.21.11.",
 	"authors": [
 		"Idontkonw"
@@ -10,11 +10,11 @@
 	"license": "GPL-3.0-or-later",
 	"environment": "client",
 	"mixins": [
-		"naruka.mixins.json"
+		"sakura.mixins.json"
 	],
 	"entrypoints": {
 		"client": [
-			"com.naruka.client.NarukaClient",
+			"com.sakura.client.SakuraClient",
 		]
 	},
 	"depends": {
