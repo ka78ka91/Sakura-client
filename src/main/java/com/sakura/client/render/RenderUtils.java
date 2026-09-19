@@ -125,8 +125,7 @@ public final class RenderUtils {
 	// ------------------------------------------------------------ rectangles
 
 	/** Fills an axis-aligned rectangle. */
-	public static void drawRect(DrawContext ctx, float x, float y, float width, float height, int argb) {
-		if (width <= 0.0f || height <= 0.0f || (argb >>> 24) == 0) {
+	public static void drawRect(DrawContext ctx, float x, float y, float width, float height, int argb) {		if (width <= 0.0f || height <= 0.0f || (argb >>> 24) == 0) {
 			return;
 		}
 		int x1 = Math.round(x);
@@ -248,5 +247,178 @@ public final class RenderUtils {
 			drawRect(ctx, x + outerInset, bottomRow, band, 1.0f, argb);
 			drawRect(ctx, right - innerInset, bottomRow, band, 1.0f, argb);
 		}
+	}
+
+	// ------------------------------------------------- world overlay primitives
+
+	/**
+	 * Draws a rectangular outline of the given thickness around the rectangle spanned by two corners.
+	 *
+	 * <p>Built from four {@link #drawRect} calls, so it stays inside the GUI API and needs nothing from the
+	 * (much heavier) 3D render pipeline.</p>
+	 */
+	public static void drawOutline(DrawContext ctx, float x0, float y0, float x1, float y1,
+								   float thickness, int argb) {
+		if ((argb >>> 24) == 0) {
+			return;
+		}
+
+		float left = Math.min(x0, x1);
+		float right = Math.max(x0, x1);
+		float top = Math.min(y0, y1);
+		float bottom = Math.max(y0, y1);
+		float t = Math.max(1.0f, thickness);
+		float width = right - left;
+		float height = bottom - top;
+
+		if (width <= 0.0f || height <= 0.0f) {
+			return;
+		}
+
+		drawRect(ctx, left, top, width, t, argb);
+		drawRect(ctx, left, bottom - t, width, t, argb);
+
+		// The vertical edges only span what the horizontal ones left over, so corners are not drawn twice.
+		float innerHeight = height - 2.0f * t;
+
+		if (innerHeight > 0.0f) {
+			drawRect(ctx, left, top + t, t, innerHeight, argb);
+			drawRect(ctx, right - t, top + t, t, innerHeight, argb);
+		}
+	}
+
+	/** Draws an outline made of four corner brackets, the style most 2D ESPs use. */
+	public static void drawCornerBox(DrawContext ctx, float x0, float y0, float x1, float y1,
+									 float length, float thickness, int argb) {
+		if ((argb >>> 24) == 0) {
+			return;
+		}
+
+		float left = Math.min(x0, x1);
+		float right = Math.max(x0, x1);
+		float top = Math.min(y0, y1);
+		float bottom = Math.max(y0, y1);
+		float t = Math.max(1.0f, thickness);
+		float arm = Math.min(length, Math.min(right - left, bottom - top) * 0.5f);
+
+		if (arm <= 0.0f) {
+			return;
+		}
+
+		// Top left, top right, bottom left, bottom right: a horizontal and a vertical arm each.
+		drawRect(ctx, left, top, arm, t, argb);
+		drawRect(ctx, left, top + t, t, arm - t, argb);
+		drawRect(ctx, right - arm, top, arm, t, argb);
+		drawRect(ctx, right - t, top + t, t, arm - t, argb);
+		drawRect(ctx, left, bottom - t, arm, t, argb);
+		drawRect(ctx, left, bottom - arm, t, arm - t, argb);
+		drawRect(ctx, right - arm, bottom - t, arm, t, argb);
+		drawRect(ctx, right - t, bottom - arm, t, arm - t, argb);
+	}
+
+	/**
+	 * Draws a straight line of the given thickness by stamping a square brush along it.
+	 *
+	 * <p>The GUI API only fills axis-aligned rectangles, so a rotated line has to be assembled from them. The
+	 * segment is first clipped to the window (Liang-Barsky), which both keeps the brush count bounded for a
+	 * tracer that points off screen and avoids stamping thousands of squares at nothing.</p>
+	 */
+	public static void drawLine(DrawContext ctx, float x0, float y0, float x1, float y1,
+								float thickness, int argb) {
+		if ((argb >>> 24) == 0) {
+			return;
+		}
+
+		if (!clipSegment(x0, y0, x1, y1, 0.0f, 0.0f,
+				ctx.getScaledWindowWidth(), ctx.getScaledWindowHeight())) {
+			return;
+		}
+
+		// clipSegment leaves the visible part of the segment in that scratch array.
+		float clipX0 = clipScratch[0];
+		float clipY0 = clipScratch[1];
+		float clipX1 = clipScratch[2];
+		float clipY1 = clipScratch[3];
+
+		float t = Math.max(1.0f, thickness);		float dx = clipX1 - clipX0;
+		float dy = clipY1 - clipY0;
+		int steps = (int) Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / t);
+
+		if (steps <= 0) {
+			drawRect(ctx, clipX0 - t * 0.5f, clipY0 - t * 0.5f, t, t, argb);
+			return;
+		}
+
+		for (int step = 0; step <= steps; step++) {
+			float progress = (float) step / steps;
+			drawRect(ctx, clipX0 + dx * progress - t * 0.5f, clipY0 + dy * progress - t * 0.5f, t, t, argb);
+		}
+	}
+
+	/** Scratch for {@link #clipSegment}, reused so drawing never allocates. */
+	private static final float[] clipScratch = new float[4];
+
+	/** Liang-Barsky parameters, reused for the same reason. */
+	private static final float[] clipP = new float[4];
+	private static final float[] clipQ = new float[4];
+
+	/**
+	 * Clips a segment against a rectangle.
+	 *
+	 * @return {@code true} when any part of the segment is inside, in which case the clipped endpoints are
+	 * left in {@link #clipScratch}
+	 */
+	private static boolean clipSegment(float x0, float y0, float x1, float y1,
+									   float left, float top, float right, float bottom) {
+		float dx = x1 - x0;
+		float dy = y1 - y0;
+		float start = 0.0f;
+		float end = 1.0f;
+
+		clipP[0] = -dx;
+		clipP[1] = dx;
+		clipP[2] = -dy;
+		clipP[3] = dy;
+		clipQ[0] = x0 - left;
+		clipQ[1] = right - x0;
+		clipQ[2] = y0 - top;
+		clipQ[3] = bottom - y0;
+
+		for (int edge = 0; edge < 4; edge++) {
+			if (clipP[edge] == 0.0f) {
+				if (clipQ[edge] < 0.0f) {
+					return false;
+				}
+
+				continue;
+			}
+
+			float ratio = clipQ[edge] / clipP[edge];
+
+			if (clipP[edge] < 0.0f) {
+				if (ratio > end) {
+					return false;
+				}
+
+				if (ratio > start) {
+					start = ratio;
+				}
+			} else {
+				if (ratio < start) {
+					return false;
+				}
+
+				if (ratio < end) {
+					end = ratio;
+				}
+			}
+		}
+
+		clipScratch[0] = x0 + start * dx;
+		clipScratch[1] = y0 + start * dy;
+		clipScratch[2] = x0 + end * dx;
+		clipScratch[3] = y0 + end * dy;
+
+		return true;
 	}
 }

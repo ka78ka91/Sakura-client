@@ -17,14 +17,19 @@ import com.sakura.client.module.impl.AutoClickerModule;
 import com.sakura.client.module.impl.AutoTotemModule;
 import com.sakura.client.module.impl.AutoWeaponModule;
 import com.sakura.client.module.impl.CriticalsModule;
+import com.sakura.client.module.impl.EspModule;
 import com.sakura.client.module.impl.FullbrightModule;
 import com.sakura.client.module.impl.HitboxModule;
 import com.sakura.client.module.impl.KeepSprintModule;
+import com.sakura.client.module.impl.NameTagsModule;
 import com.sakura.client.module.impl.NoMissCooldownModule;
 import com.sakura.client.module.impl.ReachModule;
+import com.sakura.client.module.impl.TracersModule;
 import com.sakura.client.module.impl.TriggerBotModule;
 import com.sakura.client.module.impl.VelocityModule;
 import com.sakura.client.notification.NotificationManager;
+import com.sakura.client.render.WorldOverlayRenderer;
+import com.sakura.client.render.WorldProjection;
 import com.sakura.client.rotation.RotationManager;
 import com.sakura.client.safety.FlagDetector;
 import com.sakura.client.setting.Setting;
@@ -78,11 +83,14 @@ public class SakuraClient implements ClientModInitializer {
 		ModuleManager.register(new AutoTotemModule());
 		ModuleManager.register(new AutoWeaponModule());
 		ModuleManager.register(new CriticalsModule());
+		ModuleManager.register(new EspModule());
 		ModuleManager.register(new FullbrightModule());
 		ModuleManager.register(new HitboxModule());
 		ModuleManager.register(new KeepSprintModule());
+		ModuleManager.register(new NameTagsModule());
 		ModuleManager.register(new NoMissCooldownModule());
 		ModuleManager.register(new ReachModule());
+		ModuleManager.register(new TracersModule());
 		ModuleManager.register(new TriggerBotModule());
 		ModuleManager.register(new VelocityModule());
 
@@ -94,6 +102,10 @@ public class SakuraClient implements ClientModInitializer {
 		HudManager.register(new FpsElement());
 
 		HudRenderer.register();
+
+		// World overlays: the matrix capture feeds the projection the ESP, name tags and tracers draw with.
+		WorldProjection.register();
+		WorldOverlayRenderer.register();
 
 		clickGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 				"key.sakura.clickgui",
