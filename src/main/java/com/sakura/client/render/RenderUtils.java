@@ -44,6 +44,32 @@ public final class RenderUtils {
 		return font().fontHeight;
 	}
 
+	/**
+	 * Shortens {@code text} until it fits into {@code maxWidth} pixels, marking the cut with an ellipsis.
+	 *
+	 * <p>Uses the font's own measurement rather than counting characters, so wide glyphs are accounted for.</p>
+	 */
+	public static String trimToWidth(String text, float maxWidth) {
+		if (text == null || text.isEmpty() || maxWidth <= 0.0f) {
+			return "";
+		}
+
+		TextRenderer renderer = font();
+
+		if (renderer.getWidth(text) <= maxWidth) {
+			return text;
+		}
+
+		String ellipsis = "...";
+		float room = maxWidth - renderer.getWidth(ellipsis);
+
+		if (room <= 0.0f) {
+			return "";
+		}
+
+		return renderer.trimToWidth(text, (int) room) + ellipsis;
+	}
+
 	// ------------------------------------------------------------------ text
 
 	/**

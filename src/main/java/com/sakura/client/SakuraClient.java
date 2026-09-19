@@ -6,11 +6,15 @@ import com.sakura.client.gui.ClickGuiScreen;
 import com.sakura.client.gui.HudEditorScreen;
 import com.sakura.client.hud.HudManager;
 import com.sakura.client.hud.HudRenderer;
+import com.sakura.client.hud.element.ArmorHudElement;
 import com.sakura.client.hud.element.CoordinatesElement;
 import com.sakura.client.hud.element.FpsElement;
 import com.sakura.client.hud.element.KeystrokesElement;
 import com.sakura.client.hud.element.ModuleListElement;
 import com.sakura.client.hud.element.MusicPlayerElement;
+import com.sakura.client.hud.element.PingTpsElement;
+import com.sakura.client.hud.element.PotionHudElement;
+import com.sakura.client.hud.element.TargetHudElement;
 import com.sakura.client.module.Module;
 import com.sakura.client.module.ModuleManager;
 import com.sakura.client.module.impl.AutoClickerModule;
@@ -100,6 +104,10 @@ public class SakuraClient implements ClientModInitializer {
 		HudManager.register(new KeystrokesElement());
 		HudManager.register(new CoordinatesElement());
 		HudManager.register(new FpsElement());
+		HudManager.register(new TargetHudElement());
+		HudManager.register(new ArmorHudElement());
+		HudManager.register(new PotionHudElement());
+		HudManager.register(new PingTpsElement());
 
 		HudRenderer.register();
 
