@@ -1,6 +1,7 @@
 package com.naruka.client.hud;
 
 import com.naruka.client.NarukaClient;
+import com.naruka.client.notification.NotificationManager;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -33,5 +34,11 @@ public final class HudRenderer {
 		}
 
 		HudManager.render(context);
+
+		// Notices are drawn here while no screen is open, and by the menu when one is — otherwise a toggle made
+		// in the menu would be confirmed twice, in two different corners.
+		if (client.currentScreen == null && !NotificationManager.isEmpty()) {
+			NotificationManager.render(context, context.getScaledWindowWidth() - 6.0f, 6.0f, 1.0f);
+		}
 	}
 }

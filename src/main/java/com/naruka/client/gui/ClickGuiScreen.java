@@ -13,6 +13,8 @@ import com.naruka.client.hud.HudModule;
 import com.naruka.client.module.Category;
 import com.naruka.client.module.Module;
 import com.naruka.client.module.ModuleManager;
+import com.naruka.client.notification.NotificationManager;
+import com.naruka.client.render.LocalTransform;
 import com.naruka.client.render.RenderUtils;
 import com.naruka.client.render.RenderUtils.Align;
 import net.minecraft.client.gui.Click;
@@ -86,6 +88,13 @@ public class ClickGuiScreen extends Screen {
 	private static final float SECTION_HEADER_HEIGHT = 34.0f;
 	private static final float SECTION_GAP = 16.0f;
 	private static final float SECTION_PADDING = 12.0f;
+	/**
+	 * Left inset of a section title inside its box. The page title is drawn at the same visual inset — see the
+	 * title block in {@code drawContent}.
+	 */
+	private static final float SECTION_TITLE_INSET = 14.0f;
+	/** Gap kept between the settings panel and the window edge, so the body scrollbar stays visible. */
+	private static final float PANEL_RIGHT_MARGIN = 18.0f;
 	private static final float ROW_HEIGHT = 24.0f;
 	private static final float MODULE_ROW_HEIGHT = 28.0f;
 	private static final float BUTTON_HEIGHT = 20.0f;
@@ -178,6 +187,15 @@ public class ClickGuiScreen extends Screen {
 	private final Map<String, Boolean> collapsedSections = new HashMap<>();
 	private final Map<String, ToggleWidget> toggles = new HashMap<>();
 	private final Map<String, KeybindWidget> keybinds = new HashMap<>();
+
+	/**
+	 * Hit boxes of the module rows drawn by the category pages, keyed by module name.
+	 *
+	 * <p>Filled during render and read during input, mirroring how {@code activeWidgets} works: widgets record
+	 * their bounds while drawing because the render pass always runs before the input pass.</p>
+	 */
+	private final Map<String, Rect> moduleRows = new LinkedHashMap<>();
+	private final ModuleSettingsPanel settingsPanel = new ModuleSettingsPanel();
 
 	private final ColorPickerWidget accentPicker = new ColorPickerWidget();
 	private final ToggleWidget descriptionsToggle = new ToggleWidget(true);
@@ -395,6 +413,10 @@ public class ClickGuiScreen extends Screen {
 		this.activeWidgets.clear();
 		this.activeButtons.clear();
 		this.sectionHeaders.clear();
+		this.moduleRows.clear();
+
+		// Widgets clip in screen space but only know their local bounds, so they need this mapping.
+		LocalTransform.set(this.originX, this.originY, this.scale);
 
 		context.getMatrices().pushMatrix();
 		context.getMatrices().translate(this.originX, this.originY);
@@ -407,6 +429,9 @@ public class ClickGuiScreen extends Screen {
 		RenderUtils.drawBorder(context, 0.0f, 0.0f, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_RADIUS, 1.0f, WINDOW_BORDER);
 
 		context.getMatrices().popMatrix();
+
+		// Whatever draws after this point (the HUD) is in screen space again.
+		LocalTransform.reset();
 	}
 
 	private void drawSidebarSurface(DrawContext context) {
@@ -497,8 +522,12 @@ public class ClickGuiScreen extends Screen {
 				? (this.searchQuery.isEmpty() ? "Type to filter modules" : this.searchQuery)
 				: this.selected.subtitle();
 
+		// The title is drawn at 1.6x. translate() runs before scale(), so this offset is in local units:
+		// shifting the origin by the section inset lines the title's left edge up with the section headers
+		// below it instead of leaving it outdented at the content edge. At 1.6x the glyph bearing adds about
+		// 0.6px of extra inset, which is deliberately ignored.
 		context.getMatrices().pushMatrix();
-		context.getMatrices().translate(contentX, titleY);
+		context.getMatrices().translate(contentX + SECTION_TITLE_INSET, titleY);
 		context.getMatrices().scale(1.6f, 1.6f);
 		RenderUtils.drawText(context, title, 0.0f, 0.0f, TEXT, true);
 		context.getMatrices().popMatrix();
@@ -530,6 +559,8 @@ public class ClickGuiScreen extends Screen {
 		context.disableScissor();
 
 		drawScrollbar(context);
+		drawSettingsPanel(context, mouseX, mouseY);
+		drawNotifications(context);
 	}
 
 	private void drawScrollbar(DrawContext context) {
@@ -546,6 +577,32 @@ public class ClickGuiScreen extends Screen {
 
 		RenderUtils.drawRoundedRect(context, trackX, bodyTop(), 3.0f, viewport, 1.5f, 0x1AFFFFFF);
 		RenderUtils.drawRoundedRect(context, trackX, thumbY, 3.0f, thumbHeight, 1.5f, SCROLLBAR);
+	}
+
+	/**
+	 * Draws the module settings panel on top of the page body.
+	 *
+	 * <p>Deliberately called after the body scissor is released: the panel spans the full body height and clips
+	 * its own scrolling content, which would otherwise be cut short by the body's clip rectangle.</p>
+	 */
+	private void drawSettingsPanel(DrawContext context, float mouseX, float mouseY) {
+		if (!this.settingsPanel.isOpen()) {
+			return;
+		}
+
+		float panelX = WINDOW_WIDTH - PANEL_RIGHT_MARGIN - ModuleSettingsPanel.WIDTH;
+		float panelY = HEADER_HEIGHT + 12.0f;
+		this.settingsPanel.layout(panelX, panelY, Math.max(120.0f, bodyBottom() - panelY - 12.0f));
+		this.settingsPanel.render(context, mouseX, mouseY);
+	}
+
+	private void drawNotifications(DrawContext context) {
+		if (NotificationManager.isEmpty()) {
+			return;
+		}
+
+		// The window is scaled, so the inverse scale keeps notices the same apparent size as in the HUD.
+		NotificationManager.render(context, WINDOW_WIDTH - 16.0f, HEADER_HEIGHT + 8.0f, 1.0f / this.scale);
 	}
 
 	// --------------------------------------------------------------- page router
@@ -685,6 +742,8 @@ public class ClickGuiScreen extends Screen {
 	 */
 	private float moduleRow(DrawContext context, Module module, float x, float y, float width,
 							 float mouseX, float mouseY) {
+		// Recorded so a click on the row — but not on its toggle or key bind — can open the settings panel.
+		this.moduleRows.put(module.getName(), new Rect(x, y, width, MODULE_ROW_HEIGHT));
 		RenderUtils.drawTextVCentered(context, module.getName(), x, y, MODULE_ROW_HEIGHT, TEXT, false, Align.LEFT);
 
 		if (ConfigManager.get().descriptions) {
@@ -900,6 +959,15 @@ public class ClickGuiScreen extends Screen {
 		double mouseX = toLocalX(click.x());
 		double mouseY = toLocalY(click.y());
 
+		// Widgets cache their hit boxes in local window space, so they must be handed the converted
+		// click — passing the raw screen-space one silently misses whenever the window is scaled.
+		Click localClick = new Click(mouseX, mouseY, click.buttonInfo());
+
+		// The settings panel overlays the module rows, so it consumes clicks before anything underneath.
+		if (this.settingsPanel.mouseClicked(localClick)) {
+			return true;
+		}
+
 		if (this.closeButton.contains(mouseX, mouseY)) {
 			close();
 			return true;
@@ -937,12 +1005,25 @@ public class ClickGuiScreen extends Screen {
 
 		// Widgets cache their hit boxes in local window space, so they must be handed the converted
 		// click — passing the raw screen-space one silently misses whenever the window is scaled.
-		Click localClick = new Click(mouseX, mouseY, click.buttonInfo());
-
 		for (GuiWidget widget : this.activeWidgets) {
 			if (widget.mouseClicked(localClick)) {
 				return true;
 			}
+		}
+
+		// Reached only when the click missed every widget on the row, i.e. it landed on the module name.
+		for (Map.Entry<String, Rect> entry : this.moduleRows.entrySet()) {
+			if (!entry.getValue().contains(mouseX, mouseY)) {
+				continue;
+			}
+
+			Module module = ModuleManager.get(entry.getKey());
+
+			if (module != null && module.hasSettings()) {
+				this.settingsPanel.open(module);
+			}
+
+			return true;
 		}
 
 		return super.mouseClicked(click, doubled);
@@ -953,6 +1034,10 @@ public class ClickGuiScreen extends Screen {
 		layout();
 
 		Click localClick = new Click(toLocalX(click.x()), toLocalY(click.y()), click.buttonInfo());
+
+		if (this.settingsPanel.mouseDragged(localClick, offsetX / this.scale, offsetY / this.scale)) {
+			return true;
+		}
 
 		for (GuiWidget widget : this.activeWidgets) {
 			if (widget.mouseDragged(localClick, offsetX / this.scale, offsetY / this.scale)) {
@@ -968,7 +1053,7 @@ public class ClickGuiScreen extends Screen {
 		layout();
 
 		Click localClick = new Click(toLocalX(click.x()), toLocalY(click.y()), click.buttonInfo());
-		boolean handled = false;
+		boolean handled = this.settingsPanel.mouseReleased(localClick);
 
 		for (GuiWidget widget : this.activeWidgets) {
 			if (widget.mouseReleased(localClick)) {
@@ -993,6 +1078,10 @@ public class ClickGuiScreen extends Screen {
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
 		layout();
+
+		if (this.settingsPanel.mouseScrolled(toLocalX(mouseX), toLocalY(mouseY), verticalAmount)) {
+			return true;
+		}
 
 		if (toLocalX(mouseX) < SIDEBAR_WIDTH) {
 			return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);

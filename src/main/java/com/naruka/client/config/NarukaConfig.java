@@ -30,6 +30,15 @@ public class NarukaConfig {
 	public Map<String, Boolean> moduleStates = new HashMap<>();
 	public Map<String, Integer> moduleKeybinds = new HashMap<>();
 
+	/**
+	 * Per-module parameter values, keyed by module name and then by setting name.
+	 *
+	 * <p>Values are kept untyped ({@code Boolean}, {@code Double}, {@code String}, {@code List}) and handed to
+	 * the owning {@code Setting} to interpret, so a malformed or outdated entry is rejected in one place
+	 * instead of breaking the whole file.</p>
+	 */
+	public Map<String, Map<String, Object>> moduleSettings = new HashMap<>();
+
 	// ------------------------------------------------------------------------ hud
 	public Map<String, HudPosition> hudPositions = new HashMap<>();
 

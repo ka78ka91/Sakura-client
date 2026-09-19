@@ -14,6 +14,8 @@ import com.naruka.client.hud.element.MusicPlayerElement;
 import com.naruka.client.module.Module;
 import com.naruka.client.module.ModuleManager;
 import com.naruka.client.module.impl.FullbrightModule;
+import com.naruka.client.notification.NotificationManager;
+import com.naruka.client.setting.Setting;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -24,6 +26,7 @@ import net.minecraft.client.util.Window;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -42,10 +45,21 @@ public class NarukaClient implements ClientModInitializer {
 
 	private static KeyBinding clickGuiKey;
 	private static boolean restored;
+	private static boolean settingsDirty;
+	/** Set while the config is being applied, so loading values does not immediately mark them dirty. */
+	private static boolean loadingSettings;
 
 	@Override
 	public void onInitializeClient() {
 		ConfigManager.load();
+
+		// Any parameter change marks the config dirty; it is flushed once per tick instead of per edit.
+		Setting.setGlobalChangeListener(setting -> {
+			if (!loadingSettings) {
+				settingsDirty = true;
+			}
+		});
+		Module.setToggleListener(NotificationManager::showModuleToggle);
 
 		// Feature modules.
 		ModuleManager.register(new FullbrightModule());
@@ -79,7 +93,46 @@ public class NarukaClient implements ClientModInitializer {
 	private static void restorePersistedState() {
 		NarukaConfig config = ConfigManager.get();
 		ModuleManager.applyPersistedState(config.moduleStates, config.moduleKeybinds);
+		applyModuleSettings(config);
 		HudManager.loadPositions();
+	}
+
+	/** Applies the per-module parameter values stored in the config. */
+	private static void applyModuleSettings(NarukaConfig config) {
+		loadingSettings = true;
+
+		try {
+			for (Module module : ModuleManager.getAll()) {
+				module.applySettings(config.moduleSettings.get(module.getName()));
+			}
+		} finally {
+			loadingSettings = false;
+		}
+	}
+
+	/**
+	 * Writes every module's parameters back to the config file.
+	 *
+	 * <p>Called once per client tick and returns immediately unless a setting actually changed, so dragging a
+	 * slider does not touch the disk on every frame.</p>
+	 */
+	public static void persistModuleSettings() {
+		if (!settingsDirty) {
+			return;
+		}
+
+		NarukaConfig config = ConfigManager.get();
+
+		for (Module module : ModuleManager.getAll()) {
+			Map<String, Object> values = module.settingsToMap();
+
+			if (!values.isEmpty()) {
+				config.moduleSettings.put(module.getName(), values);
+			}
+		}
+
+		ConfigManager.save();
+		settingsDirty = false;
 	}
 
 	private static void onEndClientTick(MinecraftClient client) {
@@ -92,6 +145,8 @@ public class NarukaClient implements ClientModInitializer {
 			toggleMenu(client);
 		}
 
+		NotificationManager.tick();
+		persistModuleSettings();
 		pollModuleKeybinds(client);
 		ModuleManager.tick();
 	}

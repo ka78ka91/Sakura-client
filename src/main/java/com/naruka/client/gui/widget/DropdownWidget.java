@@ -115,7 +115,9 @@ public class DropdownWidget implements GuiWidget {
 		float fullHeight = listHeight();
 		float visibleHeight = fullHeight * this.animation;
 
-		context.enableScissor((int) this.x, (int) listTop, (int) (this.x + this.width), (int) (listTop + visibleHeight));
+		// Clipped through LocalTransform: the option list must be cut off in screen space, and this widget only
+		// knows its local bounds.
+		com.naruka.client.render.LocalTransform.enableScissor(context, this.x, listTop, this.width, visibleHeight);
 
 		RenderUtils.drawRoundedRect(context, this.x, listTop, this.width, fullHeight, LIST_RADIUS, LIST_BG);
 		RenderUtils.drawBorder(context, this.x, listTop, this.width, fullHeight, LIST_RADIUS, 1.0f, LIST_BORDER);
