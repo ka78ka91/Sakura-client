@@ -14,7 +14,7 @@
 	],
 	"entrypoints": {
 		"client": [
-			"com.sakura.client.SakuraClient",
+			"com.sakura.client.SakuraClient"
 		]
 	},
 	"depends": {
