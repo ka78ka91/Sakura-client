@@ -19,7 +19,7 @@ import net.minecraft.util.math.Vec3d;
  * Reduces the knockback taken from hits, ported from LiquidBounce's {@code ModuleVelocity} (GPL-3.0).
  *
  * <p>The packet hook and the delay/pause plumbing are in place, and the default mode is implemented and verified.
- * LiquidBounce ships thirteen further modes 鈥?six generic ones and eight written against a specific server or
+ * LiquidBounce ships thirteen further modes —six generic ones and eight written against a specific server or
  * anti-cheat. Their sources are on disk and they are the next thing to port; they are deliberately absent from the
  * mode list until then, because a mode that does not do what its name says is worse than no mode at all.</p>
  *

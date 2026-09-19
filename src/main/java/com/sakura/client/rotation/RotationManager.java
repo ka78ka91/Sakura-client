@@ -17,7 +17,7 @@ import net.minecraft.util.math.MathHelper;
  * player's movement direction afterwards, because the game computed that movement from the spoofed angle. This
  * implementation instead swaps the angles in only for the duration of
  * {@code ClientPlayerEntity#sendMovementPackets} and puts them back on the way out. The packet therefore carries
- * the module's angle while everything else 鈥?movement, camera, the player's own input 鈥?keeps using the real one,
+ * the module's angle while everything else —movement, camera, the player's own input —keeps using the real one,
  * and no movement correction is needed at all.</p>
  */
 public final class RotationManager {

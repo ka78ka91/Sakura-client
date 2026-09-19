@@ -8,7 +8,7 @@ import net.minecraft.client.gui.DrawContext;
  * Capsule switch (36x20) with a smoothly animated knob.
  *
  * <p>The knob position is an animation factor rather than a boolean, so the transition is a simple
- * exponential approach towards the target 鈥?{@code factor += (target - factor) * 0.2} on every frame,
+ * exponential approach towards the target —{@code factor += (target - factor) * 0.2} on every frame,
  * which is the classic {@code transition: 0.3s} feel of the prototype.</p>
  */
 public class ToggleWidget implements GuiWidget {

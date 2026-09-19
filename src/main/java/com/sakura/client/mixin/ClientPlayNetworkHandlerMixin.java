@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Feeds the {@link FlagDetector} with the server's position corrections.
  *
  * <p>{@code onPlayerPositionLook} is the 1.21.11 handler for the packet that teleports the client back to where
- * the server believes it is 鈥?the clearest signal that our movement claims were rejected.</p>
+ * the server believes it is —the clearest signal that our movement claims were rejected.</p>
  */
 @Mixin(ClientPlayNetworkHandler.class)
 public abstract class ClientPlayNetworkHandlerMixin {

@@ -6,7 +6,7 @@ import com.sakura.client.setting.Tagged;
  * How a rotation travels from where the player is looking to where the module wants to look.
  *
  * <p>The names match LiquidBounce's smooth rotation modes. Each mode maps elapsed progress onto the fraction of
- * the distance covered, so all three end up at exactly the same place 鈥?they differ only in how the first ticks
+ * the distance covered, so all three end up at exactly the same place —they differ only in how the first ticks
  * of the turn feel, which is what a server-side rotation check notices.</p>
  */
 public enum RotationMode implements Tagged {

@@ -11,7 +11,7 @@ import net.minecraft.client.gui.DrawContext;
  * <p>The wheel is a hue/saturation disc: the angle around the centre picks the hue and the distance
  * from the centre picks the saturation, so the middle fades to white exactly like a radial
  * white overlay in CSS. It is rasterised from concentric rings of small axis-aligned spans because
- * the 1.21.11 GUI API only exposes {@link DrawContext#fill(int, int, int, int, int)} 鈥?no rotation
+ * the 1.21.11 GUI API only exposes {@link DrawContext#fill(int, int, int, int, int)} —no rotation
  * or shader access is needed.</p>
  */
 public class ColorPickerWidget implements GuiWidget {

@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Surrounds an attack with the KeepSprint module's velocity capture and restore.
  *
  * <p>Capturing here rather than reading vanilla's own argument means the module does not depend on how this
- * version reduces velocity 鈥?the values before the attack are simply put back.</p>
+ * version reduces velocity —the values before the attack are simply put back.</p>
  */
 @Mixin(PlayerEntity.class)
 public abstract class PlayerEntityKeepSprintMixin {

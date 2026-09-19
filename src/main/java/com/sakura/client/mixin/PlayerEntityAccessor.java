@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
  *
  * <p>{@code isCriticalHit} is the exact predicate {@code PlayerEntity.attack} uses to decide whether an attack
  * crits. Calling it instead of re-writing the conditions means the Criticals module cannot drift from vanilla
- * when the conditions change 鈥?and the conditions are the whole point of the module.</p>
+ * when the conditions change —and the conditions are the whole point of the module.</p>
  */
 @Mixin(PlayerEntity.class)
 public interface PlayerEntityAccessor {

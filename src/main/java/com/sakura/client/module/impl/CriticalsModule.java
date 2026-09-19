@@ -35,15 +35,15 @@ import java.util.Deque;
  *
  * <h2>Modes</h2>
  * <ul>
- *     <li><b>Jump</b> (default) 鈥?a real jump first, then the attack once the player is falling. A genuine crit
+ *     <li><b>Jump</b> (default) —a real jump first, then the attack once the player is falling. A genuine crit
  *     by vanilla's rules, which is why it is the default.</li>
- *     <li><b>Packet</b> 鈥?sends extra movement packets nudging the Y position so the server believes the player is
+ *     <li><b>Packet</b> —sends extra movement packets nudging the Y position so the server believes the player is
  *     falling. Several sub-modes exist because each server validates the nudge differently.</li>
- *     <li><b>NoGround</b> 鈥?every movement packet claims the player is airborne.</li>
- *     <li><b>Blink</b> 鈥?holds back outgoing packets for a few hundred milliseconds at a time, so the server's
+ *     <li><b>NoGround</b> —every movement packet claims the player is airborne.</li>
+ *     <li><b>Blink</b> —holds back outgoing packets for a few hundred milliseconds at a time, so the server's
  *     view of the player lags behind the fall.</li>
- *     <li><b>Timer</b> 鈥?slows the client's own clock while a crit is pending, stretching the fall.</li>
- *     <li><b>None</b> 鈥?the module does nothing.</li>
+ *     <li><b>Timer</b> —slows the client's own clock while a crit is pending, stretching the fall.</li>
+ *     <li><b>None</b> —the module does nothing.</li>
  * </ul>
  *
  * <p>Everything except Jump and None manipulates what the server is told and is labelled accordingly in the UI.</p>

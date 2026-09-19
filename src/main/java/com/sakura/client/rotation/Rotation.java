@@ -3,8 +3,8 @@ package com.sakura.client.rotation;
 /**
  * A pair of look angles.
  *
- * @param yaw   horizontal angle in degrees, wrapping at 卤180
- * @param pitch vertical angle in degrees, clamped to 卤90
+ * @param yaw   horizontal angle in degrees, wrapping at ±180
+ * @param pitch vertical angle in degrees, clamped to ±90
  */
 public record Rotation(float yaw, float pitch) {
 

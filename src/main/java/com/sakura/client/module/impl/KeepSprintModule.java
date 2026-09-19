@@ -18,7 +18,7 @@ import net.minecraft.util.math.Vec3d;
  * own arithmetic means the module behaves the same whether or not the version reduces velocity on a sprint
  * hit, and a setting below 100% deliberately slows the player instead of pretending to.</p>
  *
- * <p>When the Chance roll fails nothing is re-applied at all, so vanilla's result stands 鈥?that is the honest
+ * <p>When the Chance roll fails nothing is re-applied at all, so vanilla's result stands —that is the honest
  * equivalent of LiquidBounce's 0.6 fallback, which hard-codes a reduction that 1.21.11 does not perform.</p>
  */
 public final class KeepSprintModule extends Module {

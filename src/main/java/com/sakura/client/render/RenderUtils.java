@@ -95,7 +95,7 @@ public final class RenderUtils {
 	 *
 	 * <p>The blur itself is not drawn here: 1.21.11 applies it as a whole-screen post effect from
 	 * {@code Screen.renderBackground} (which {@code Screen.renderWithTooltip} calls before a screen's
-	 * own {@code render}), and it may only be applied <em>once per frame</em> 鈥?calling
+	 * own {@code render}), and it may only be applied <em>once per frame</em> —calling
 	 * {@code DrawContext.applyBlur()} from a screen's render method throws. There is also no way to blur
 	 * a single rectangle through the public GUI API. This method therefore supplies the glass itself:
 	 * the tint, the brighter sheen across the upper part and the inner top edge highlight that make a

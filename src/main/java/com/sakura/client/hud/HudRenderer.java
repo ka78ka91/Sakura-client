@@ -35,7 +35,7 @@ public final class HudRenderer {
 
 		HudManager.render(context);
 
-		// Notices are drawn here while no screen is open, and by the menu when one is 鈥?otherwise a toggle made
+		// Notices are drawn here while no screen is open, and by the menu when one is —otherwise a toggle made
 		// in the menu would be confirmed twice, in two different corners.
 		if (client.currentScreen == null && !NotificationManager.isEmpty()) {
 			NotificationManager.render(context, context.getScaledWindowWidth() - 6.0f, 6.0f, 1.0f);

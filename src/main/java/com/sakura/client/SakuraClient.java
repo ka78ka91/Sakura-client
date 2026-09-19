@@ -14,6 +14,7 @@ import com.sakura.client.hud.element.MusicPlayerElement;
 import com.sakura.client.module.Module;
 import com.sakura.client.module.ModuleManager;
 import com.sakura.client.module.impl.AutoClickerModule;
+import com.sakura.client.module.impl.AutoTotemModule;
 import com.sakura.client.module.impl.CriticalsModule;
 import com.sakura.client.module.impl.FullbrightModule;
 import com.sakura.client.module.impl.HitboxModule;
@@ -73,6 +74,7 @@ public class SakuraClient implements ClientModInitializer {
 
 		// Feature modules.
 		ModuleManager.register(new AutoClickerModule());
+		ModuleManager.register(new AutoTotemModule());
 		ModuleManager.register(new CriticalsModule());
 		ModuleManager.register(new FullbrightModule());
 		ModuleManager.register(new HitboxModule());

@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
  * NoGround mode: every movement packet leaves claiming the player is airborne.
  *
  * <p>{@code sendMovementPackets} reads {@code isOnGround()} once per packet variant to fill the packet in, so
- * redirecting those reads covers every variant at once and touches nothing else 鈥?the player's own physics never
+ * redirecting those reads covers every variant at once and touches nothing else —the player's own physics never
  * sees the lie.</p>
  */
 @Mixin(ClientPlayerEntity.class)

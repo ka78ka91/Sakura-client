@@ -17,7 +17,7 @@ import net.minecraft.entity.player.PlayerEntity;
  * <p>LiquidBounce applies the margin in two places: the entity margin and the {@code AttackRange} item component.
  * The component does exist in 1.21.11 under the Yarn name {@code net.minecraft.component.type.AttackRangeComponent},
  * but its armoury of range values is only consulted for items that carry the component, so only the entity margin
- * path is ported 鈥?and unlike LiquidBounce, which assigns the margin outright, this adds to whatever vanilla
+ * path is ported —and unlike LiquidBounce, which assigns the margin outright, this adds to whatever vanilla
  * returned so a non-zero vanilla margin is preserved.</p>
  *
  * <p>This is the least invasive way to extend reach: nothing is sent to the server and the interaction range
@@ -52,7 +52,7 @@ public final class HitboxModule extends Module {
 	 * Adds this module's margin to whatever vanilla computed.
 	 *
 	 * <p>Called from {@code EntityTargetingMarginMixin} for every entity whose margin is queried, so it must
-	 * stay allocation free and must never throw 鈥?a broken margin computation would break the player's aim.</p>
+	 * stay allocation free and must never throw —a broken margin computation would break the player's aim.</p>
 	 *
 	 * @param entity       the entity whose margin is being read
 	 * @param vanillaValue the margin vanilla returned

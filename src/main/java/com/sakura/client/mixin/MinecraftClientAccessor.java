@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
  *
  * <p>{@code doAttack} and {@code doItemUse} are the exact paths the player's own mouse buttons take, including
  * the attack-range component check, the attack cooldown gate and the swing animation. Calling them keeps the
- * auto-clicking modules honest 鈥?they press the same button the player would, rather than reimplementing what
+ * auto-clicking modules honest —they press the same button the player would, rather than reimplementing what
  * that button does and drifting from vanilla behaviour.</p>
  *
  * <p>Verified against the 1.21.11 mappings: both methods exist and are private, so an invoker is the only way to

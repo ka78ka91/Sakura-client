@@ -34,7 +34,7 @@ import java.util.Map;
 /**
  * Sakura Client main menu: a 900x550 glass window with a 180px sidebar and a routed content area.
  *
- * <p>Everything is laid out in <em>local window space</em> 鈥?{@code (0,0)} is the window's own top-left
+ * <p>Everything is laid out in <em>local window space</em> —{@code (0,0)} is the window's own top-left
  * corner. The whole window is then painted inside one matrix transform scaled by the "GUI scale"
  * setting, and incoming mouse coordinates are converted back into that space before hit testing. That
  * keeps every hit box independent of the scale factor.</p>
@@ -89,7 +89,7 @@ public class ClickGuiScreen extends Screen {
 	private static final float SECTION_GAP = 16.0f;
 	private static final float SECTION_PADDING = 12.0f;
 	/**
-	 * Left inset of a section title inside its box. The page title is drawn at the same visual inset 鈥?see the
+	 * Left inset of a section title inside its box. The page title is drawn at the same visual inset —see the
 	 * title block in {@code drawContent}.
 	 */
 	private static final float SECTION_TITLE_INSET = 14.0f;
@@ -305,7 +305,7 @@ public class ClickGuiScreen extends Screen {
 		float configured = Math.max(MIN_GUI_SCALE, Math.min(MAX_GUI_SCALE, ConfigManager.get().guiScale));
 
 		// The window is a fixed 900x550 design. At high vanilla GUI scales the scaled screen can be
-		// smaller than that, so the applied scale is additionally capped by what actually fits 鈥?		// otherwise the sidebar and the close button would sit off-screen.
+		// smaller than that, so the applied scale is additionally capped by what actually fits —		// otherwise the sidebar and the close button would sit off-screen.
 		float fitting = Math.min(this.width / (float) WINDOW_WIDTH, this.height / (float) WINDOW_HEIGHT);
 		this.scale = Math.max(0.1f, Math.min(configured, fitting));
 		this.scaleLimited = this.scale < configured - 0.001f;
@@ -398,7 +398,7 @@ public class ClickGuiScreen extends Screen {
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 		// NOTE: in 1.21.11 Screen.renderWithTooltip already calls renderBackground for us, and the
-		// blur post effect may only be applied once per frame 鈥?calling renderBackground here would
+		// blur post effect may only be applied once per frame —calling renderBackground here would
 		// throw "Can only blur once per frame". The blur and darkening therefore come from vanilla.
 		super.render(context, mouseX, mouseY, delta);
 
@@ -741,7 +741,7 @@ public class ClickGuiScreen extends Screen {
 	 */
 	private float moduleRow(DrawContext context, Module module, float x, float y, float width,
 							 float mouseX, float mouseY) {
-		// Recorded so a click on the row 鈥?but not on its toggle or key bind 鈥?can open the settings panel.
+		// Recorded so a click on the row —but not on its toggle or key bind —can open the settings panel.
 		this.moduleRows.put(module.getName(), new Rect(x, y, width, MODULE_ROW_HEIGHT));
 		RenderUtils.drawTextVCentered(context, module.getName(), x, y, MODULE_ROW_HEIGHT, TEXT, false, Align.LEFT);
 
@@ -959,7 +959,7 @@ public class ClickGuiScreen extends Screen {
 		double mouseY = toLocalY(click.y());
 
 		// Widgets cache their hit boxes in local window space, so they must be handed the converted
-		// click 鈥?passing the raw screen-space one silently misses whenever the window is scaled.
+		// click —passing the raw screen-space one silently misses whenever the window is scaled.
 		Click localClick = new Click(mouseX, mouseY, click.buttonInfo());
 
 		// The settings panel overlays the module rows, so it consumes clicks before anything underneath.
@@ -1003,7 +1003,7 @@ public class ClickGuiScreen extends Screen {
 		}
 
 		// Widgets cache their hit boxes in local window space, so they must be handed the converted
-		// click 鈥?passing the raw screen-space one silently misses whenever the window is scaled.
+		// click —passing the raw screen-space one silently misses whenever the window is scaled.
 		for (GuiWidget widget : this.activeWidgets) {
 			if (widget.mouseClicked(localClick)) {
 				return true;

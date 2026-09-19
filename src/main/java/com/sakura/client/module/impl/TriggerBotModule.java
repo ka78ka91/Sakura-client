@@ -29,7 +29,7 @@ import net.minecraft.util.math.Box;
  *
  * <p>Rotation goes through {@link RotationManager}, so it can be silent: the hit is aimed server-side while the
  * camera stays where the player left it. {@code Pause On Flag} hands control back to the global
- * {@link FlagDetector}, which stops the module the moment the server corrects our position 鈥?the clearest sign
+ * {@link FlagDetector}, which stops the module the moment the server corrects our position —the clearest sign
  * that our rotation claims are being checked.</p>
  */
 public final class TriggerBotModule extends Module {

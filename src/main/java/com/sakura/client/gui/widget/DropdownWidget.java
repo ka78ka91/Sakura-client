@@ -6,7 +6,7 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 
 /**
- * Single-line dropdown: {@code label ... current value 鈥簘.
+ * Single-line dropdown: {@code label ... current value ›.
  *
  * <p>Clicking the row expands an option list directly underneath it. The list grows with a short
  * animation and is clipped with {@link DrawContext#enableScissor(int, int, int, int)} so the
