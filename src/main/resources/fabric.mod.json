@@ -14,7 +14,7 @@
 	],
 	"entrypoints": {
 		"client": [
-			"com.naruka.client.NarukaClient"
+			"com.naruka.client.NarukaClient",
 		]
 	},
 	"depends": {

@@ -1,5 +1,8 @@
 package com.naruka.client.module;
 
+import com.naruka.client.setting.EnumSetting;
+import com.naruka.client.setting.Risk;
+import com.naruka.client.setting.Tagged;
 import com.naruka.client.setting.Setting;
 import com.naruka.client.setting.Settings;
 
@@ -159,6 +162,35 @@ public abstract class Module {
 	}
 
 	/** Optional mode label shown next to the name in the module list HUD. */
+	/**
+	 * The risk the module currently carries, taken from the values its settings are set to.
+	 *
+	 * <p>A module is only as safe as the mode it is running: Criticals on Jump spoofs nothing, while the same
+	 * module on Timer rewrites the client clock. Reading the active values means the label follows the settings
+	 * instead of describing the module in general.</p>
+	 *
+	 * <p>Only settings that are visible right now are counted. A setting the current mode has hidden is not
+	 * running, so its risk is not the module's risk: Criticals on Jump must not be labelled outdated just because
+	 * the Packet Mode it is not using defaults to NoCheatPlus.</p>
+	 *
+	 * @return the worst risk among the module's active settings
+	 */
+	public Risk getRisk() {
+		Risk worst = Risk.SAFE;
+
+		for (Setting<?> candidate : getVisibleSettings()) {
+			if (candidate instanceof EnumSetting<?> enumSetting && enumSetting.get() instanceof Tagged tagged) {
+				Risk risk = tagged.getRisk();
+
+				if (risk.ordinal() > worst.ordinal()) {
+					worst = risk;
+				}
+			}
+		}
+
+		return worst;
+	}
+
 	public String getHudSuffix() {
 		return null;
 	}

@@ -234,6 +234,14 @@ public final class ModuleSettingsPanel {
 				9.0f, HEADER_BG);
 		RenderUtils.drawTextVCentered(context, this.module.getName(), this.x + PADDING, this.y + 6.0f, 16.0f,
 				TEXT, false, Align.LEFT);
+
+		Risk risk = this.module.getRisk();
+
+		if (risk != Risk.SAFE) {
+			// The chip follows the active settings, so it changes as the mode changes.
+			drawRiskChip(context, risk, this.x + PADDING + RenderUtils.textWidth(this.module.getName()) + 8.0f,
+					this.y + 8.0f);
+		}
 		RenderUtils.drawTextVCentered(context,
 				this.module.getCategory().getDisplayName() + "  -  "
 						+ this.module.getVisibleSettings().size() + " parameters",
