@@ -9,6 +9,9 @@
 	],
 	"license": "GPL-3.0-or-later",
 	"environment": "client",
+	"mixins": [
+		"naruka.mixins.json"
+	],
 	"entrypoints": {
 		"client": [
 			"com.naruka.client.NarukaClient"

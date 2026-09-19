@@ -79,6 +79,7 @@ public class NumberSetting extends Setting<Double> {
 		if (this.step > 0.0) {
 			clamped = this.min + Math.round((clamped - this.min) / this.step) * this.step;
 			clamped = Math.clamp(clamped, this.min, this.max);
+			clamped = roundToStepPrecision(clamped);
 		}
 
 		if (this.integral) {
@@ -86,6 +87,26 @@ public class NumberSetting extends Setting<Double> {
 		}
 
 		return clamped;
+	}
+
+	/**
+	 * Rounds to the number of decimals the step is written in.
+	 *
+	 * <p>Seventeen steps of 0.05 land on 0.8500000000000001 in binary floating point. Rounding to the step's own
+	 * precision turns that back into 0.85, which keeps stored values and the config file free of the noise.</p>
+	 */
+	private double roundToStepPrecision(double value) {
+		double scale = 1.0;
+
+		for (int decimals = 0; decimals < 6; decimals++) {
+			if (Math.abs(this.step * scale - Math.rint(this.step * scale)) < 1.0E-9) {
+				return Math.rint(value * scale) / scale;
+			}
+
+			scale *= 10.0;
+		}
+
+		return value;
 	}
 
 	@Override

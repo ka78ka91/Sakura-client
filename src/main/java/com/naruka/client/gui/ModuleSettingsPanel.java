@@ -513,6 +513,10 @@ public final class ModuleSettingsPanel {
 			return false;
 		}
 
+		// Committed before the widgets are released: a slider reports its value only while it is dragging, so
+		// releasing first would silently drop the value of a click that never turned into a drag.
+		pushToSettings();
+
 		boolean consumed = false;
 
 		for (Setting<?> setting : this.module.getSettings()) {
@@ -530,7 +534,6 @@ public final class ModuleSettingsPanel {
 			}
 		}
 
-		pushToSettings();
 		return consumed;
 	}
 
