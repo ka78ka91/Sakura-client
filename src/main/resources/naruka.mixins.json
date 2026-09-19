@@ -15,7 +15,8 @@
 		"MinecraftClientAttackMixin",
 		"PlayerEntityAccessor",
 		"PlayerEntityKeepSprintMixin",
-		"PlayerEntityReachMixin"
+		"PlayerEntityReachMixin",
+		"VelocityPacketMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

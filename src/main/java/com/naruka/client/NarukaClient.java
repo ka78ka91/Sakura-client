@@ -21,6 +21,7 @@ import com.naruka.client.module.impl.KeepSprintModule;
 import com.naruka.client.module.impl.NoMissCooldownModule;
 import com.naruka.client.module.impl.ReachModule;
 import com.naruka.client.module.impl.TriggerBotModule;
+import com.naruka.client.module.impl.VelocityModule;
 import com.naruka.client.notification.NotificationManager;
 import com.naruka.client.rotation.RotationManager;
 import com.naruka.client.safety.FlagDetector;
@@ -79,6 +80,7 @@ public class NarukaClient implements ClientModInitializer {
 		ModuleManager.register(new NoMissCooldownModule());
 		ModuleManager.register(new ReachModule());
 		ModuleManager.register(new TriggerBotModule());
+		ModuleManager.register(new VelocityModule());
 
 		// HUD elements are modules too, so they can be toggled and bound like anything else.
 		HudManager.register(new MusicPlayerElement());
