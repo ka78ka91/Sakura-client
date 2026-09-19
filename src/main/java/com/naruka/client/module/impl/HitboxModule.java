@@ -12,9 +12,13 @@ import net.minecraft.entity.player.PlayerEntity;
 /**
  * Enlarges the targeting margin of other entities, making them easier to hit.
  *
- * <p>Ported from LiquidBounce's {@code ModuleHitbox} (GPL-3.0), including its 0.1 default. LiquidBounce also
- * applies the margin to an {@code AttackRange} item component; that class does not exist in the 1.21.11 Yarn
- * mappings, so only the entity margin path is implemented.</p>
+ * <p>Ported from LiquidBounce's {@code ModuleHitbox} (GPL-3.0), including its 0.1 default.</p>
+ *
+ * <p>LiquidBounce applies the margin in two places: the entity margin and the {@code AttackRange} item component.
+ * The component does exist in 1.21.11 under the Yarn name {@code net.minecraft.component.type.AttackRangeComponent},
+ * but its armoury of range values is only consulted for items that carry the component, so only the entity margin
+ * path is ported — and unlike LiquidBounce, which assigns the margin outright, this adds to whatever vanilla
+ * returned so a non-zero vanilla margin is preserved.</p>
  *
  * <p>This is the least invasive way to extend reach: nothing is sent to the server and the interaction range
  * itself is untouched, so it stays inside what a server-side range check accepts.</p>
