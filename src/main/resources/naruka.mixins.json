@@ -6,9 +6,14 @@
 	"client": [
 		"ClientPlayNetworkHandlerMixin",
 		"ClientPlayerEntityRotationMixin",
+		"CriticalsAttackMixin",
+		"CriticalsBlinkMixin",
+		"CriticalsNoGroundMixin",
+		"CriticalsTimerMixin",
 		"EntityTargetingMarginMixin",
 		"MinecraftClientAccessor",
 		"MinecraftClientAttackMixin",
+		"PlayerEntityAccessor",
 		"PlayerEntityKeepSprintMixin",
 		"PlayerEntityReachMixin"
 	],

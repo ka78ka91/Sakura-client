@@ -14,6 +14,7 @@ import com.naruka.client.hud.element.MusicPlayerElement;
 import com.naruka.client.module.Module;
 import com.naruka.client.module.ModuleManager;
 import com.naruka.client.module.impl.AutoClickerModule;
+import com.naruka.client.module.impl.CriticalsModule;
 import com.naruka.client.module.impl.FullbrightModule;
 import com.naruka.client.module.impl.HitboxModule;
 import com.naruka.client.module.impl.KeepSprintModule;
@@ -71,6 +72,7 @@ public class NarukaClient implements ClientModInitializer {
 
 		// Feature modules.
 		ModuleManager.register(new AutoClickerModule());
+		ModuleManager.register(new CriticalsModule());
 		ModuleManager.register(new FullbrightModule());
 		ModuleManager.register(new HitboxModule());
 		ModuleManager.register(new KeepSprintModule());
