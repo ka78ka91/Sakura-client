@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Fabric Loom dev environment: run/ holds the dev world saves, logs, crash
+# reports and any extra mods dropped in for testing — none of it belongs in git.
+run/
+.fabric/
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS / misc
+.DS_Store
+Thumbs.db
+*.log

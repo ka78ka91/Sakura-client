@@ -1,0 +1,7 @@
+# Keep line endings stable: sources are authored with LF, and the repo should
+# not rewrite them to CRLF just because it is checked out on Windows.
+* text=auto eol=lf
+
+*.jar binary
+*.png binary
+*.bat text eol=crlf

@@ -1,0 +1,23 @@
+{
+	"schemaVersion": 1,
+	"id": "naruka",
+	"version": "${version}",
+	"name": "Naruka Client",
+	"description": "Glassmorphism-styled client GUI, HUD and utilities for Minecraft 1.21.11.",
+	"authors": [
+		"Idontkonw"
+	],
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.naruka.client.NarukaClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=${loader_version}",
+		"minecraft": "~${minecraft_version}",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
