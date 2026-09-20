@@ -1,7 +1,9 @@
 package com.sakura.client.hud.element;
 
+import com.sakura.client.config.ConfigManager;
 import com.sakura.client.hud.HudAnchor;
 import com.sakura.client.hud.HudModule;
+import com.sakura.client.render.Animations;
 import com.sakura.client.render.RenderUtils;
 import com.sakura.client.render.RenderUtils.Align;
 import com.sakura.client.setting.BooleanSetting;
@@ -21,6 +23,12 @@ import java.util.Locale;
  * a moment afterwards so the panel does not flicker while the aim moves across a hitbox — LiquidBounce instead
  * listens to its KillAura's target, which this client does not have.</p>
  *
+ * <p>Everything on the panel moves: the health bar eases toward the real health, quickly when the target is
+ * losing health and slowly while it regenerates, with a paler segment left behind over the part that was just
+ * lost. A drop in health also flashes the panel red for a moment. The panel itself fades in when a target
+ * appears and out once the hold timer has run out, instead of popping in and out, and a name too long for its
+ * box scrolls.</p>
+ *
  * <p>Nothing is drawn without a target, so the panel only appears while there is something to look at.</p>
  */
 public final class TargetHudElement extends HudModule {
@@ -29,20 +37,68 @@ public final class TargetHudElement extends HudModule {
 	private static final float PANEL_HEIGHT = 34.0f;
 	private static final float PADDING = 6.0f;
 	private static final float BAR_HEIGHT = 5.0f;
+	/** Vertical offset of the health bar inside the panel. */
+	private static final float BAR_TOP = 22.0f;
 	private static final float TEXT_Y = 5.0f;
+	private static final float TEXT_BOX = 10.0f;
+	/** Reserved width on the right of the bar, where the health number sits. */
+	private static final float HEALTH_COLUMN = 32.0f;
+	private static final float NAME_GAP = 6.0f;
+	/** Losing health is drawn fast, regenerating slowly; the difference is what makes a hit feel like one. */
+	private static final float HEALTH_DOWN_SPEED = 15.0f;
+	private static final float HEALTH_UP_SPEED = 5.0f;
+	/** The paler segment over freshly lost health drains away at this speed. */
+	private static final float TRAIL_SPEED = 3.2f;
+	private static final float FADE_IN_SPEED = 10.0f;
+	private static final float FADE_OUT_SPEED = 7.0f;
+	private static final float FLASH_DECAY_SPEED = 3.6f;
+	private static final float DAMAGE_THRESHOLD = 0.001f;
+	private static final float FADE_EPSILON = 0.01f;
+	private static final float MARQUEE_SPEED = 22.0f;
+	private static final float MARQUEE_HOLD_MILLIS = 900.0f;
+	private static final long ACCENT_PULSE_MILLIS = 2600L;
 
-	private static final int PANEL_BG = 0x66000000;
 	private static final int NAME_COLOR = 0xFFFFFFFF;
-	private static final int DISTANCE_COLOR = 0xFFB0B0B0;
+	private static final int DISTANCE_COLOR = 0xFF9A9AA2;
 	private static final int BAR_BG = 0x40FFFFFF;
+	private static final int BAR_HIGHLIGHT = 0x1FFFFFFF;
+	/** What a bar looks like over health that has just been taken off. */
+	private static final int BAR_TRAIL = 0xCCFFFFFF;
+	private static final int FLASH_COLOR = 0xFFFF3B48;
+	private static final int FLASH_BORDER = 0x66FF5560;
+	private static final int HEALTH_GOOD = 0xFF5BE86B;
+	private static final int HEALTH_WARN = 0xFFFFC04D;
+	private static final int HEALTH_BAD = 0xFFFF4D4D;
+
+	/** Glass body: a dark, slightly cool gradient drawn over the blurred world. */
+	private static final int GLASS_TOP = 0xB414141A;
+	private static final int GLASS_BOTTOM = 0x8C0A0A0F;
+	private static final int GLASS_BORDER = 0x2EFFFFFF;
+	private static final int GLASS_SHADOW = 0x66000000;
+	private static final float GLASS_SHADOW_SPREAD = 4.0f;
 
 	private final NumberSetting hold = setting(new NumberSetting("Hold",
 			"Ticks the panel keeps showing the last target after it leaves the crosshair.", 40.0, 0.0, 200.0, 5.0, "t"));
 	private final BooleanSetting showDistance = setting(new BooleanSetting("Distance",
 			"Show how far the target is.", true));
 
+	private final Animations.Clock clock = new Animations.Clock();
 	private LivingEntity target;
 	private int ticksSinceSeen;
+
+	/** True while there is data worth drawing, including during the fade out after the target is gone. */
+	private boolean hasContent;
+	private float visibility;
+	private float shownHealth;
+	private float trailHealth;
+	private float flash;
+	private float lastFraction = -1.0f;
+	private float shownMaxHealth = 20.0f;
+	private String shownName = "";
+	private String shownDistance = "";
+	private float marqueeOffset;
+	private float marqueeDirection = 1.0f;
+	private float marqueeHold = MARQUEE_HOLD_MILLIS;
 
 	public TargetHudElement() {
 		super("TargetHUD", "Name and health of the entity under the crosshair",
@@ -96,12 +152,16 @@ public final class TargetHudElement extends HudModule {
 		return Math.min(1.0f, Math.max(0.0f, entity.getHealth() / maximum));
 	}
 
-	/** @return health colour, red at death's door and green at full health */
+	/**
+	 * @return health colour, red at death's door and green at full health. The ramp passes through amber rather
+	 * than interpolating straight from red to green, which would go through a muddy brown.
+	 */
 	public static int healthColor(float fraction) {
-		int red = Math.round((1.0f - fraction) * 255.0f);
-		int green = Math.round(fraction * 255.0f);
+		float clamped = Animations.clamp01(fraction);
 
-		return 0xFF000000 | (red << 16) | (green << 8);
+		return clamped < 0.5f
+				? RenderUtils.mix(HEALTH_BAD, HEALTH_WARN, clamped * 2.0f)
+				: RenderUtils.mix(HEALTH_WARN, HEALTH_GOOD, (clamped - 0.5f) * 2.0f);
 	}
 
 	@Override
@@ -124,45 +184,169 @@ public final class TargetHudElement extends HudModule {
 		MinecraftClient client = MinecraftClient.getInstance();
 		LivingEntity current = this.target;
 
-		if (current == null || client.player == null) {
+		if (client.player == null) {
+			this.hasContent = false;
 			return;
 		}
 
-		RenderUtils.drawRoundedRect(context, x, y, PANEL_WIDTH, PANEL_HEIGHT, cornerRadius(), PANEL_BG);
+		float delta = this.clock.tick();
 
-		String name = current.getDisplayName().getString();
-		float right = x + PANEL_WIDTH - PADDING;
-
-		RenderUtils.drawTextVCentered(context, String.format(Locale.ROOT, "%.1f", current.getHealth()),
-				right, y + TEXT_Y, 10.0f, healthColor(healthFraction(current)), true, Align.RIGHT);
-
-		float nameX = x + PADDING;
-
-		if (this.showDistance.get()) {
-			float healthWidth = RenderUtils.textWidth(String.format(Locale.ROOT, "%.1f", current.getHealth()));
-			float available = PANEL_WIDTH - PADDING * 2.0f - healthWidth - 6.0f;
-			String distance = String.format(Locale.ROOT, "%.1fm", distanceTo(client, current));
-			// Long names (or a long team prefix) would run into the health number, so they are cut off instead.
-			float room = available - RenderUtils.textWidth(distance) - 4.0f;
-			String shown = RenderUtils.textWidth(name) <= room ? name : RenderUtils.trimToWidth(name, room);
-
-			RenderUtils.drawTextVCentered(context, shown, nameX, y + TEXT_Y, 10.0f, NAME_COLOR, true, Align.LEFT);
-			RenderUtils.drawTextVCentered(context, distance, right, y + TEXT_Y, 10.0f, DISTANCE_COLOR, true,
-					Align.RIGHT);
-		} else {
-			float healthWidth = RenderUtils.textWidth(String.format(Locale.ROOT, "%.1f", current.getHealth()));
-			float room = PANEL_WIDTH - PADDING * 2.0f - healthWidth - 6.0f;
-
-			RenderUtils.drawTextVCentered(context, RenderUtils.trimToWidth(name, room), nameX, y + TEXT_Y, 10.0f,
-					NAME_COLOR, true, Align.LEFT);
+		if (current != null) {
+			trackTarget(client, current, delta);
+		} else if (!this.hasContent) {
+			// No target and nothing left over to fade: the panel stays off screen entirely.
+			return;
 		}
 
-		float fraction = healthFraction(current);
-		float barY = y + PANEL_HEIGHT - PADDING - BAR_HEIGHT + 1.0f;
-		float barWidth = PANEL_WIDTH - PADDING * 2.0f;
+		this.visibility = Animations.approach(this.visibility, current != null ? 1.0f : 0.0f,
+				current != null ? FADE_IN_SPEED : FADE_OUT_SPEED, delta);
 
-		RenderUtils.drawRect(context, x + PADDING, barY, barWidth, BAR_HEIGHT, BAR_BG);
-		RenderUtils.drawRect(context, x + PADDING, barY, barWidth * fraction, BAR_HEIGHT, healthColor(fraction));
+		if (this.visibility <= FADE_EPSILON) {
+			this.hasContent = false;
+			return;
+		}
+
+		drawPanel(context, x, y);
+	}
+
+	/** Eases every animated value toward the target the crosshair is on. */
+	private void trackTarget(MinecraftClient client, LivingEntity entity, float delta) {
+		float fraction = healthFraction(entity);
+
+		if (!this.hasContent) {
+			// A fresh target starts from its real health, so the bar never travels in from the last one.
+			this.shownHealth = fraction;
+			this.trailHealth = fraction;
+			this.flash = 0.0f;
+			this.lastFraction = fraction;
+			this.visibility = 0.0f;
+			this.hasContent = true;
+			this.shownName = "";
+		}
+
+		if (fraction < this.lastFraction - DAMAGE_THRESHOLD) {
+			this.flash = 1.0f;
+		}
+
+		this.lastFraction = fraction;
+		this.shownHealth = Animations.approach(this.shownHealth, fraction,
+				fraction < this.shownHealth ? HEALTH_DOWN_SPEED : HEALTH_UP_SPEED, delta);
+		this.flash = Animations.approach(this.flash, 0.0f, FLASH_DECAY_SPEED, delta);
+		this.shownMaxHealth = Math.max(1.0f, entity.getMaxHealth());
+		this.shownDistance = String.format(Locale.ROOT, "%.1fm", distanceTo(client, entity));
+
+		// The trail only ever sits above the bar: healing pulls it up instantly instead of leaving a gap.
+		this.trailHealth = this.shownHealth >= this.trailHealth
+				? this.shownHealth
+				: Animations.approach(this.trailHealth, this.shownHealth, TRAIL_SPEED, delta);
+
+		String name = entity.getDisplayName().getString();
+
+		if (!name.equals(this.shownName)) {
+			this.shownName = name;
+			this.marqueeOffset = 0.0f;
+			this.marqueeDirection = 1.0f;
+			this.marqueeHold = MARQUEE_HOLD_MILLIS;
+		}
+
+		advanceMarquee(delta);
+	}
+
+	/** Scrolls a name that is wider than its box back and forth, pausing at both ends. */
+	private void advanceMarquee(float delta) {
+		float overflow = RenderUtils.textWidth(this.shownName) - nameBoxWidth();
+
+		if (overflow <= 0.5f) {
+			this.marqueeOffset = 0.0f;
+
+			return;
+		}
+
+		if (this.marqueeHold > 0.0f) {
+			this.marqueeHold -= delta * 1000.0f;
+
+			return;
+		}
+
+		this.marqueeOffset += MARQUEE_SPEED * delta * this.marqueeDirection;
+
+		if (this.marqueeOffset >= overflow) {
+			this.marqueeOffset = overflow;
+			this.marqueeDirection = -1.0f;
+			this.marqueeHold = MARQUEE_HOLD_MILLIS;
+		} else if (this.marqueeOffset <= 0.0f) {
+			this.marqueeOffset = 0.0f;
+			this.marqueeDirection = 1.0f;
+			this.marqueeHold = MARQUEE_HOLD_MILLIS;
+		}
+	}
+
+	/** @return the width the name may use before it runs into the distance read-out */
+	private float nameBoxWidth() {
+		float box = PANEL_WIDTH - PADDING * 2.0f;
+
+		if (this.showDistance.get() && !this.shownDistance.isEmpty()) {
+			box -= RenderUtils.textWidth(this.shownDistance) + NAME_GAP;
+		}
+
+		return Math.max(0.0f, box);
+	}
+
+	private void drawPanel(DrawContext context, float x, float y) {
+		float alpha = Animations.clamp01(this.visibility);
+		float radius = cornerRadius();
+		float right = x + PANEL_WIDTH - PADDING;
+		float textY = y + TEXT_Y + (TEXT_BOX - RenderUtils.fontHeight()) / 2.0f + 1.0f;
+		float fill = Animations.clamp01(this.shownHealth);
+		float trail = Animations.clamp01(Math.max(this.trailHealth, fill));
+		int barColor = RenderUtils.mix(healthColor(this.shownHealth), FLASH_COLOR, this.flash * 0.75f);
+
+		RenderUtils.drawGlassPanel(context, x, y, PANEL_WIDTH, PANEL_HEIGHT, radius,
+				RenderUtils.multiplyAlpha(GLASS_TOP, alpha), RenderUtils.multiplyAlpha(GLASS_BOTTOM, alpha),
+				RenderUtils.multiplyAlpha(RenderUtils.mix(GLASS_BORDER, FLASH_BORDER, this.flash), alpha),
+				RenderUtils.multiplyAlpha(GLASS_SHADOW, alpha), GLASS_SHADOW_SPREAD);
+		RenderUtils.drawAccentWash(context, x, y, PANEL_WIDTH, PANEL_HEIGHT, radius,
+				ConfigManager.get().accentColor,
+				alpha * (0.85f + Animations.breathe(ACCENT_PULSE_MILLIS, 0.0f) * 0.30f));
+
+		if (this.flash > 0.01f) {
+			// A hit washes the panel red for a moment, which registers without having to read the bar.
+			RenderUtils.drawAccentWash(context, x, y, PANEL_WIDTH, PANEL_HEIGHT, radius, FLASH_COLOR,
+					this.flash * 0.55f * alpha);
+		}
+
+		if (this.showDistance.get()) {
+			RenderUtils.drawTextVCentered(context, this.shownDistance, right, y + TEXT_Y, TEXT_BOX,
+					RenderUtils.multiplyAlpha(DISTANCE_COLOR, alpha), true, Align.RIGHT);
+		}
+
+		RenderUtils.drawMarqueeText(context, this.shownName, x + PADDING, textY, nameBoxWidth(),
+				this.marqueeOffset, RenderUtils.multiplyAlpha(NAME_COLOR, alpha), true);
+		RenderUtils.drawTextVCentered(context,
+				String.format(Locale.ROOT, "%.1f", this.shownHealth * this.shownMaxHealth), right,
+				y + BAR_TOP - (TEXT_BOX - BAR_HEIGHT) * 0.5f, TEXT_BOX,
+				RenderUtils.multiplyAlpha(barColor, alpha), true, Align.RIGHT);
+
+		drawHealthBar(context, x, y, alpha, fill, trail, barColor);
+	}
+
+	private void drawHealthBar(DrawContext context, float x, float y, float alpha, float fill, float trail,
+							   int barColor) {
+		float barX = x + PADDING;
+		float barY = y + BAR_TOP;
+		float barWidth = PANEL_WIDTH - PADDING * 2.0f - HEALTH_COLUMN;
+
+		RenderUtils.drawProgressBar(context, barX, barY, barWidth, BAR_HEIGHT, fill,
+				RenderUtils.multiplyAlpha(BAR_BG, alpha), RenderUtils.multiplyAlpha(barColor, alpha));
+
+		if (trail > fill + 0.005f) {
+			RenderUtils.drawRect(context, barX + barWidth * fill, barY + 1.0f,
+					barWidth * (trail - fill), BAR_HEIGHT - 2.0f,
+					RenderUtils.multiplyAlpha(BAR_TRAIL, alpha));
+		}
+
+		RenderUtils.drawRoundedRect(context, barX + 1.0f, barY + 1.0f, barWidth - 2.0f, 1.0f, 0.5f,
+				RenderUtils.multiplyAlpha(BAR_HIGHLIGHT, alpha));
 	}
 
 	private static double distanceTo(MinecraftClient client, LivingEntity entity) {

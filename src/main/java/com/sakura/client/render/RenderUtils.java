@@ -2,7 +2,9 @@ package com.sakura.client.render;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.util.Identifier;
 
 /**
  * Low-level 2D drawing helpers for the Sakura glass UI.
@@ -273,6 +275,355 @@ public final class RenderUtils {
 			drawRect(ctx, x + outerInset, bottomRow, band, 1.0f, argb);
 			drawRect(ctx, right - innerInset, bottomRow, band, 1.0f, argb);
 		}
+	}
+
+	// ------------------------------------------------------------ colour math
+
+	/** True when the colour would draw nothing. */
+	public static boolean isVisible(int argb) {
+		return (argb >>> 24) != 0;
+	}
+
+	/** Replaces the alpha channel of {@code argb}. */
+	public static int withAlpha(int argb, int alpha) {
+		int clamped = alpha < 0 ? 0 : (alpha > 255 ? 255 : alpha);
+		return (clamped << 24) | (argb & 0x00FFFFFF);
+	}
+
+	/** Scales the existing alpha, e.g. {@code multiplyAlpha(colour, 0.5f)} to fade a colour by half. */
+	public static int multiplyAlpha(int argb, float factor) {
+		int alpha = Math.round((argb >>> 24) * factor);
+		return withAlpha(argb, alpha);
+	}
+
+	/**
+	 * Interpolates two packed ARGB colours channel by channel, alpha included.
+	 *
+	 * @param delta 0 returns {@code from}, 1 returns {@code to}
+	 */
+	public static int mix(int from, int to, float delta) {
+		float t = delta < 0.0f ? 0.0f : (delta > 1.0f ? 1.0f : delta);
+		int a = Math.round(((from >>> 24) & 0xFF) + (((to >>> 24) & 0xFF) - ((from >>> 24) & 0xFF)) * t);
+		int r = Math.round(((from >> 16) & 0xFF) + (((to >> 16) & 0xFF) - ((from >> 16) & 0xFF)) * t);
+		int g = Math.round(((from >> 8) & 0xFF) + (((to >> 8) & 0xFF) - ((from >> 8) & 0xFF)) * t);
+		int b = Math.round((from & 0xFF) + ((to & 0xFF) - (from & 0xFF)) * t);
+		return (a << 24) | (r << 16) | (g << 8) | b;
+	}
+
+	/** Multiplies the RGB channels, keeping alpha. {@code factor} below 1 darkens, above 1 brightens. */
+	public static int scaleRgb(int argb, float factor) {
+		int r = Math.min(255, Math.round(((argb >> 16) & 0xFF) * factor));
+		int g = Math.min(255, Math.round(((argb >> 8) & 0xFF) * factor));
+		int b = Math.min(255, Math.round((argb & 0xFF) * factor));
+		return (argb & 0xFF000000) | (r << 16) | (g << 8) | b;
+	}
+
+	/** Mixes the colour toward white, the classic "hover" highlight. */
+	public static int brighten(int argb, float amount) {
+		return mix(argb, 0xFFFFFFFF, amount);
+	}
+
+	/** Mixes the colour toward black, for pressed states and depth. */
+	public static int darken(int argb, float amount) {
+		return mix(argb, 0xFF000000, amount);
+	}
+
+	// -------------------------------------------------------- gradients & depth
+
+	/**
+	 * Fills a rectangle with a vertical gradient.
+	 *
+	 * <p>Uses the vanilla {@code fillGradient} pipeline, so the interpolation happens on the GPU and the
+	 * call costs one quad rather than one per scanline.</p>
+	 *
+	 * @param topArgb    colour at {@code y}
+	 * @param bottomArgb colour at {@code y + height}
+	 */
+	public static void drawGradientRect(DrawContext ctx, float x, float y, float width, float height,
+										int topArgb, int bottomArgb) {
+		if (width <= 0.0f || height <= 0.0f) {
+			return;
+		}
+
+		int x1 = Math.round(x);
+		int y1 = Math.round(y);
+		int x2 = Math.round(x + width);
+		int y2 = Math.round(y + height);
+
+		if (x2 <= x1 || y2 <= y1) {
+			return;
+		}
+
+		ctx.fillGradient(x1, y1, x2, y2, topArgb, bottomArgb);
+	}
+
+	/**
+	 * Rounded rectangle filled with a vertical gradient.
+	 *
+	 * <p>Built from horizontal bands rather than one quad: each band's width is inset by the corner
+	 * circle at its own rows, so the shape keeps its rounded ends while the colour travels. With the
+	 * default band count the corner stepping is well under a pixel at the radii this UI uses, and the
+	 * whole call is a couple of dozen fills instead of one per row.</p>
+	 *
+	 * @param steps number of gradient bands, clamped to the pixel height
+	 */
+	public static void drawRoundedGradient(DrawContext ctx, float x, float y, float width, float height,
+										   float radius, int topArgb, int bottomArgb, int steps) {
+		if (width <= 0.0f || height <= 0.0f) {
+			return;
+		}
+
+		float r = Math.min(radius, Math.min(width, height) * 0.5f);
+
+		if (r < 1.0f) {
+			drawGradientRect(ctx, x, y, width, height, topArgb, bottomArgb);
+			return;
+		}
+
+		int bands = Math.max(1, Math.min(steps, Math.max(1, Math.round(height))));
+		float bandHeight = height / bands;
+		int lastRow = Math.round(y + height);
+
+		for (int band = 0; band < bands; band++) {
+			int rowStart = Math.round(y + band * bandHeight);
+			int rowEnd = band == bands - 1 ? lastRow : Math.round(y + (band + 1) * bandHeight);
+
+			if (rowEnd <= rowStart) {
+				continue;
+			}
+
+			// The corner arc is only present near the top and bottom edges, so the inset is the deeper of
+			// the two arcs at the rows this band covers.
+			float inset = Math.max(cornerInset(rowStart - y, r), cornerInset(y + height - rowEnd, r));
+			// Colour is sampled at the band's centre so the gradient is symmetric about the panel.
+			float position = bands == 1 ? 0.0f : (band + 0.5f) / bands;
+
+			drawRect(ctx, x + inset, rowStart, width - inset * 2.0f, rowEnd - rowStart,
+					mix(topArgb, bottomArgb, position));
+		}
+	}
+
+	/** Horizontal inset of a rounded corner at {@code distance} pixels into the arc. */
+	private static float cornerInset(float distance, float radius) {
+		if (distance >= radius) {
+			return 0.0f;
+		}
+
+		float clamped = Math.max(0.0f, distance);
+		double reach = radius - clamped;
+		double half = Math.sqrt(Math.max(0.0, (double) radius * radius - reach * reach));
+		return (float) (radius - half);
+	}
+
+	/**
+	 * Draws a soft shadow behind a rounded rectangle.
+	 *
+	 * <p>The GUI API has no blur, so the shadow is a stack of concentric rounded rectangles: the outermost
+	 * is the largest and faintest, and each layer inward both shrinks and strengthens. Stacking them makes
+	 * the alpha accumulate toward the panel, which reads as a penumbra rather than as rings.</p>
+	 *
+	 * @param spread how far the shadow reaches, in GUI pixels
+	 */
+	public static void drawSoftShadow(DrawContext ctx, float x, float y, float width, float height,
+									  float radius, float spread, int argb) {
+		int layers = Math.max(1, Math.round(spread));
+		int baseAlpha = argb >>> 24;
+
+		if (baseAlpha == 0) {
+			return;
+		}
+
+		for (int layer = layers; layer >= 1; layer--) {
+			float grow = layer;
+			float falloff = 1.0f - layer / (float) layers;
+			int alpha = Math.round(baseAlpha * falloff * falloff * 0.6f);
+
+			if (alpha <= 1) {
+				continue;
+			}
+
+			drawRoundedRect(ctx, x - grow, y - grow, width + grow * 2.0f, height + grow * 2.0f,
+					radius + grow, withAlpha(argb, alpha));
+		}
+	}
+
+	/** {@link #drawSoftShadow} under a different name, for accent-coloured halos. */
+	public static void drawGlow(DrawContext ctx, float x, float y, float width, float height,
+								float radius, float spread, int argb) {
+		drawSoftShadow(ctx, x, y, width, height, radius, spread, argb);
+	}
+
+	/**
+	 * The standard Sakura glass panel: shadow, tinted gradient body, top sheen, inner highlight and border.
+	 *
+	 * <p>Every HUD element and window uses this so the whole client reads as one material. The blur behind
+	 * it is provided by the screen itself (vanilla applies it once per frame from
+	 * {@code Screen.renderBackground}); this method supplies everything that sits on top of that blur.</p>
+	 *
+	 * @param tintTop      glass colour at the top edge, normally more opaque
+	 * @param tintBottom   glass colour at the bottom edge
+	 * @param borderArgb   hairline outline, usually a low-alpha white
+	 * @param shadowArgb   shadow colour including its own alpha; fully transparent disables it
+	 * @param shadowSpread shadow reach in pixels
+	 */
+	public static void drawGlassPanel(DrawContext ctx, float x, float y, float width, float height, float radius,
+									  int tintTop, int tintBottom, int borderArgb, int shadowArgb,
+									  float shadowSpread) {
+		if (width <= 0.0f || height <= 0.0f) {
+			return;
+		}
+
+		if ((shadowArgb >>> 24) != 0) {
+			drawSoftShadow(ctx, x, y, width, height, radius, shadowSpread, shadowArgb);
+		}
+
+		drawRoundedGradient(ctx, x, y, width, height, radius, tintTop, tintBottom, 20);
+
+		// Sheen: the upper part of a glass pane catches more light than the lower part.
+		float sheen = Math.min(height * 0.42f, 24.0f);
+
+		if (sheen > 1.0f) {
+			drawRoundedRect(ctx, x, y, width, sheen, radius, 0x0FFFFFFF);
+		}
+
+		// Inner top edge highlight, the single line that makes a rectangle read as a pane.
+		if (width > 6.0f) {
+			drawRoundedRect(ctx, x + 2.0f, y + 1.0f, width - 4.0f, 1.0f, 0.5f, 0x22FFFFFF);
+		}
+
+		if ((borderArgb >>> 24) != 0) {
+			drawBorder(ctx, x, y, width, height, radius, 1.0f, borderArgb);
+		}
+	}
+
+	/**
+	 * Draws an accent stripe that bleeds the given colour across the top of a panel.
+	 *
+	 * <p>Fades downward instead of ending on a hard line, which is what keeps an accent from looking like
+	 * a border.</p>
+	 */
+	public static void drawAccentWash(DrawContext ctx, float x, float y, float width, float height,
+									  float radius, int accentArgb, float strength) {
+		int top = withAlpha(accentArgb, Math.round(255.0f * 0.22f * strength));
+		drawRoundedGradient(ctx, x, y, width, Math.max(2.0f, height), radius, top, withAlpha(accentArgb, 0), 8);
+	}
+
+	// ---------------------------------------------------- progress & indicators
+
+	/**
+	 * A rounded progress bar: track plus a filled portion.
+	 *
+	 * @param progress 0..1, clamped
+	 */
+	public static void drawProgressBar(DrawContext ctx, float x, float y, float width, float height,
+									   float progress, int trackArgb, int fillArgb) {
+		if (width <= 0.0f || height <= 0.0f) {
+			return;
+		}
+
+		float clamped = progress < 0.0f ? 0.0f : (progress > 1.0f ? 1.0f : progress);
+		float radius = height * 0.5f;
+
+		drawRoundedRect(ctx, x, y, width, height, radius, trackArgb);
+
+		float filled = width * clamped;
+
+		// A rounded cap cannot be drawn narrower than its own radius, so tiny amounts are drawn as the cap.
+		if (filled > 0.01f) {
+			drawRoundedRect(ctx, x, y, Math.max(filled, height), height, radius, fillArgb);
+		}
+	}
+
+	// ------------------------------------------------------------- textures
+
+	/** Draws a whole texture stretched into the given rectangle. */
+	public static void drawTextureQuad(DrawContext ctx, Identifier texture, float x, float y,
+									   float width, float height) {
+		if (width <= 0.0f || height <= 0.0f) {
+			return;
+		}
+
+		int w = Math.max(1, Math.round(width));
+		int h = Math.max(1, Math.round(height));
+		// Texture size equals the drawn size with a zero UV origin, which maps the whole texture onto the quad.
+		ctx.drawTexture(RenderPipelines.GUI_TEXTURED, texture, Math.round(x), Math.round(y), 0.0f, 0.0f,
+				w, h, w, h);
+	}
+
+	/**
+	 * Draws a texture with rounded corners.
+	 *
+	 * <p>The GUI API cannot clip a texture to a rounded shape, so the rows that make up the corner arcs are
+	 * drawn one pixel tall with a scissor box that follows the circle. Only the corner rows need that
+	 * treatment — the straight middle is a single scissored quad — so the cost stays at roughly
+	 * {@code 2 * radius} draws regardless of how tall the image is.</p>
+	 */
+	public static void drawRoundedTexture(DrawContext ctx, Identifier texture, float x, float y,
+										  float width, float height, float radius) {
+		float r = Math.min(radius, Math.min(width, height) * 0.5f);
+
+		if (r < 1.0f) {
+			drawTextureQuad(ctx, texture, x, y, width, height);
+			return;
+		}
+
+		// Straight middle band.
+		ctx.enableScissor(Math.round(x), Math.round(y + r), Math.round(x + width), Math.round(y + height - r));
+		drawTextureQuad(ctx, texture, x, y, width, height);
+		ctx.disableScissor();
+
+		int rows = Math.max(1, Math.round(r));
+
+		for (int row = 0; row < rows; row++) {
+			double dy = r - (row + 0.5);
+			float inset = (float) (r - Math.sqrt(Math.max(0.0, (double) r * r - dy * dy)));
+			int left = Math.round(x + inset);
+			int right = Math.round(x + width - inset);
+
+			if (right <= left) {
+				continue;
+			}
+
+			int topRow = Math.round(y + row);
+			ctx.enableScissor(left, topRow, right, topRow + 1);
+			drawTextureQuad(ctx, texture, x, y, width, height);
+			ctx.disableScissor();
+
+			int bottomRow = Math.round(y + height - row - 1.0f);
+			ctx.enableScissor(left, bottomRow, right, bottomRow + 1);
+			drawTextureQuad(ctx, texture, x, y, width, height);
+			ctx.disableScissor();
+		}
+	}
+
+	// --------------------------------------------------- scrolling text
+
+	/**
+	 * Draws text that scrolls horizontally when it is wider than its box.
+	 *
+	 * <p>The text scrolls right-to-left, pauses at each end, and is clipped to the box with a scissor, so
+	 * long titles stay readable without shrinking the font. Callers keep the phase in a float field and
+	 * advance it with the frame delta.</p>
+	 *
+	 * @param offset  pixels the text has scrolled so far, normally {@code >= 0}
+	 */
+	public static void drawMarqueeText(DrawContext ctx, String text, float x, float y, float boxWidth,
+									   float offset, int argb, boolean shadow) {
+		if (text == null || text.isEmpty() || boxWidth <= 0.0f) {
+			return;
+		}
+
+		float textWidth = textWidth(text);
+
+		if (textWidth <= boxWidth) {
+			drawText(ctx, text, x, y, argb, shadow);
+			return;
+		}
+
+		ctx.enableScissor(Math.round(x), Math.round(y), Math.round(x + boxWidth),
+				Math.round(y + fontHeight() + 1.0f));
+		drawText(ctx, text, x - offset, y, argb, shadow);
+		ctx.disableScissor();
 	}
 
 	// ------------------------------------------------- world overlay primitives
