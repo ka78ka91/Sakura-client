@@ -33,7 +33,7 @@ import net.minecraft.util.math.Box;
  * {@link FlagDetector}, which stops the module the moment the server corrects our position —the clearest sign
  * that our rotation claims are being checked.</p>
  */
-public final class TriggerBotModule extends Module {
+public final class TriggerBotModule extends Module implements TargetProvider {
 
 	private final NumberSetting range = setting(new NumberSetting("Range",
 			"Only attack targets closer than this.", 3.0, 1.0, 6.0, 0.1, "blocks"));
@@ -74,6 +74,7 @@ public final class TriggerBotModule extends Module {
 	public TriggerBotModule() {
 		super("TriggerBot", Category.COMBAT, "Hits whatever you look at.");
 
+		TargetProviders.register(this);
 		this.rotationMode.visibleWhen(this.rotate::get);
 		this.rotationSpeed.visibleWhen(this.rotate::get);
 		this.silent.visibleWhen(this.rotate::get);
@@ -91,8 +92,14 @@ public final class TriggerBotModule extends Module {
 	}
 
 	/** @return the entity this module is currently attacking, or {@code null} */
+	@Override
 	public LivingEntity getTarget() {
 		return this.target;
+	}
+
+	@Override
+	public boolean isProviding() {
+		return isEnabled();
 	}
 
 	/** @return the rolling window of attacks this module has made */

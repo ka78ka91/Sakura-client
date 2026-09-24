@@ -67,6 +67,8 @@ public final class RotationManager {
 	private static long targetAcquiredAt;
 	/** Whether the reaction delay for the current target has already elapsed. */
 	private static boolean reactionElapsed;
+	/** Module-supplied reaction delay, or {@code -1} to derive it from the turn speed. */
+	private static long reactionOverrideMillis = -1L;
 
 	private static Float savedYaw;
 	private static Float savedPitch;
@@ -129,7 +131,7 @@ public final class RotationManager {
 		if (!reactionElapsed) {
 			elapsed++;
 
-			if (elapsed * 50L < reactionMillis(settings.speed())) {
+			if (elapsed * 50L < reactionDelayMillis()) {
 				return;
 			}
 
@@ -145,11 +147,28 @@ public final class RotationManager {
 	 * @param speed the module's configured degrees per tick
 	 * @return how long to wait before starting to follow a new target, in milliseconds
 	 */
-	private static long reactionMillis(float speed) {
+	private static long derivedReactionMillis(float speed) {
 		float span = REACTION_FAST_SPEED - REACTION_SLOW_SPEED;
 		float factor = span <= 0.0f ? 0.0f : (REACTION_FAST_SPEED - speed) / span;
 		factor = Math.clamp(factor, 0.0f, 1.0f);
 		return Math.round(REACTION_MIN_MILLIS + (REACTION_MAX_MILLIS - REACTION_MIN_MILLIS) * factor);
+	}
+
+	/**
+	 * Lets the calling module supply its own reaction delay instead of the derived one.
+	 *
+	 * <p>A module that exposes the delay as a setting has to be able to win, otherwise its parameter would be
+	 * silently added to a number the manager invented from the turn speed. Modules without such a setting simply
+	 * never call this and get the derived value.</p>
+	 *
+	 * @param millis the delay to use, or a negative value to go back to deriving it from the turn speed
+	 */
+	public static void setReactionOverride(long millis) {
+		reactionOverrideMillis = millis < 0L ? -1L : millis;
+	}
+
+	private static long reactionDelayMillis() {
+		return reactionOverrideMillis >= 0L ? reactionOverrideMillis : derivedReactionMillis(settings.speed());
 	}
 
 	/**
@@ -240,6 +259,8 @@ public final class RotationManager {
 		ticksSinceRequest = Integer.MAX_VALUE;
 		// A fresh episode owes its own reaction; without this the next target would start moving immediately.
 		reactionElapsed = false;
+		// The module that asked for an override has stopped aiming, so the next one gets the derived delay.
+		reactionOverrideMillis = -1L;
 	}
 
 	/** Called from the mixin at the head of {@code ClientPlayerEntity#sendMovementPackets}. */

@@ -5,6 +5,7 @@ import com.sakura.client.render.Theme;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.hud.HudAnchor;
 import com.sakura.client.hud.HudModule;
+import com.sakura.client.module.impl.TargetProviders;
 import com.sakura.client.render.Animations;
 import com.sakura.client.render.RenderUtils;
 import com.sakura.client.render.RenderUtils.Align;
@@ -19,11 +20,17 @@ import net.minecraft.util.math.Box;
 import java.util.Locale;
 
 /**
- * Shows the entity currently under the crosshair: name, health bar and distance.
+ * Shows the entity a combat module is working on — or, when none is, whatever is under the crosshair — with its
+ * name, health bar and distance.
  *
- * <p>Ported from LiquidBounce's target HUD (GPL-3.0). The target is whatever the crosshair points at, held for
- * a moment afterwards so the panel does not flicker while the aim moves across a hitbox — LiquidBounce instead
- * listens to its KillAura's target, which this client does not have.</p>
+ * <p>Ported from LiquidBounce's target HUD (GPL-3.0), which listens to its KillAura's target; this element
+ * originally could not, because the client had no module that picked a target of its own, so it read the
+ * crosshair instead. It now asks {@link TargetProviders} first and falls back to the crosshair only when no
+ * module claims a target, which is what makes the panel useful while an aura is fighting something the player is
+ * not looking at.</p>
+ *
+ * <p>Either way the target is held for a moment after it is lost, so the panel does not flicker while the aim
+ * or the aura's selection moves across targets.</p>
  *
  * <p>Everything on the panel moves: the health bar eases toward the real health, quickly when the target is
  * losing health and slowly while it regenerates, with a paler segment left behind over the part that was just
@@ -102,7 +109,7 @@ public final class TargetHudElement extends HudModule {
 
 	@Override
 	public void onTick() {
-		LivingEntity found = targetOf(MinecraftClient.getInstance());
+		LivingEntity found = currentTarget(MinecraftClient.getInstance());
 
 		if (found != null) {
 			this.target = found;
@@ -120,6 +127,23 @@ public final class TargetHudElement extends HudModule {
 				|| this.target.isRemoved() || !this.target.isAlive()) {
 			this.target = null;
 		}
+	}
+
+	/**
+	 * @return the entity to show: the first combat module's target, or the crosshair's when none has one
+	 *
+	 * <p>The module target wins because it is the one the player is acting on. Falling back rather than
+	 * preferring means the panel still works with no combat module switched on at all, which is how it behaved
+	 * before the providers existed.</p>
+	 */
+	public static LivingEntity currentTarget(MinecraftClient client) {
+		LivingEntity provided = TargetProviders.current();
+
+		if (provided != null && !provided.isRemoved() && provided.isAlive()) {
+			return provided;
+		}
+
+		return targetOf(client);
 	}
 
 	/**

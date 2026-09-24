@@ -25,6 +25,7 @@ import com.sakura.client.module.impl.EspModule;
 import com.sakura.client.module.impl.FullbrightModule;
 import com.sakura.client.module.impl.HitboxModule;
 import com.sakura.client.module.impl.KeepSprintModule;
+import com.sakura.client.module.impl.KillAuraModule;
 import com.sakura.client.module.impl.NameTagsModule;
 import com.sakura.client.module.impl.NoMissCooldownModule;
 import com.sakura.client.module.impl.ReachModule;
@@ -95,6 +96,7 @@ public class SakuraClient implements ClientModInitializer {
 		ModuleManager.register(new FullbrightModule());
 		ModuleManager.register(new HitboxModule());
 		ModuleManager.register(new KeepSprintModule());
+		ModuleManager.register(new KillAuraModule());
 		ModuleManager.register(new NameTagsModule());
 		ModuleManager.register(new NoMissCooldownModule());
 		ModuleManager.register(new ReachModule());
@@ -188,6 +190,8 @@ public class SakuraClient implements ClientModInitializer {
 	}
 
 	private static void onEndClientTick(MinecraftClient client) {
+		RegistryAudit.runOnce();
+
 		if (!restored) {
 			restored = true;
 			restorePersistedState();
