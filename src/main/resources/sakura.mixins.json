@@ -5,6 +5,7 @@
 	"compatibilityLevel": "JAVA_21",
 	"client": [
 		"ClientPlayNetworkHandlerMixin",
+		"ClientPlayerEntityNoSlowMixin",
 		"ClientPlayerEntityRotationMixin",
 		"CriticalsAttackMixin",
 		"CriticalsBlinkMixin",
