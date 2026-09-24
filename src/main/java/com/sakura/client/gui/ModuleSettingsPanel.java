@@ -331,8 +331,18 @@ public final class ModuleSettingsPanel {
 		}
 	}
 
+	/**
+	 * One colour row: the label and a swatch showing the current value.
+	 *
+	 * <p>A fully transparent setting is not a black colour, it is the "follow the theme" sentinel every HUD
+	 * element's base colour starts at. Drawing that value would paint an empty black box and print
+	 * {@code #000000}, which reads as an actual choice — so the swatch becomes an outline-tinted slate
+	 * labelled "Follow theme" instead.</p>
+	 */
 	private void renderColor(DrawContext context, Setting<?> rawSetting, float rowY, float mouseX, float mouseY) {
 		ColorSetting setting = asColor(rawSetting);
+		boolean followsTheme = setting.isFullyTransparent();
+
 		RenderUtils.drawTextVCentered(context, setting.getName(), this.x + PADDING, rowY, 20.0f,
 				Theme.text(), false, Align.LEFT);
 
@@ -342,11 +352,21 @@ public final class ModuleSettingsPanel {
 		boolean hovered = mouseX >= swatchX && mouseX < swatchX + swatchWidth
 				&& mouseY >= rowY && mouseY < rowY + 20.0f;
 
-		RenderUtils.drawRoundedRect(context, swatchX, rowY + 2.0f, swatchWidth, 16.0f, 4.0f, setting.get());
-		RenderUtils.drawBorder(context, swatchX, rowY + 2.0f, swatchWidth, 16.0f, 4.0f, 1.0f,
-				hovered || expanded ? Theme.buttonBgHover() : Theme.buttonBg());
-		RenderUtils.drawTextVCentered(context, setting.getHex(), swatchX + swatchWidth - 4.0f, rowY + 2.0f, 16.0f,
-				Theme.text(), false, Align.RIGHT);
+		if (followsTheme) {
+			// The theme's own accent at low alpha stands in for "whatever the theme happens to be".
+			RenderUtils.drawRoundedRect(context, swatchX, rowY + 2.0f, swatchWidth, 16.0f, 4.0f,
+					Theme.accentAlpha(0x26));
+			RenderUtils.drawBorder(context, swatchX, rowY + 2.0f, swatchWidth, 16.0f, 4.0f, 1.0f,
+					hovered || expanded ? Theme.accentAlpha(0xCC) : Theme.accentAlpha(0x66));
+			RenderUtils.drawTextVCentered(context, "Follow theme", swatchX + 6.0f, rowY + 2.0f, 16.0f,
+					Theme.textDim(), false, Align.LEFT);
+		} else {
+			RenderUtils.drawRoundedRect(context, swatchX, rowY + 2.0f, swatchWidth, 16.0f, 4.0f, setting.get());
+			RenderUtils.drawBorder(context, swatchX, rowY + 2.0f, swatchWidth, 16.0f, 4.0f, 1.0f,
+					hovered || expanded ? Theme.buttonBgHover() : Theme.buttonBg());
+			RenderUtils.drawTextVCentered(context, setting.getHex(), swatchX + swatchWidth - 4.0f, rowY + 2.0f,
+					16.0f, Theme.text(), false, Align.RIGHT);
+		}
 
 		if (expanded) {
 			ColorPickerWidget picker = picker(setting);

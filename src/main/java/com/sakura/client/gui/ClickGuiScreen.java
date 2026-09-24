@@ -76,8 +76,15 @@ public class ClickGuiScreen extends Screen {
 	 * title block in {@code drawContent}.
 	 */
 	private static final float SECTION_TITLE_INSET = 14.0f;
-	/** Gap kept between the settings panel and the window edge, so the body scrollbar stays visible. */
-	private static final float PANEL_RIGHT_MARGIN = 18.0f;
+	/**
+	 * Gap kept between the right edge of the settings panel and the window edge.
+	 *
+	 * <p>Wider than the body scrollbar needs on its own (that sits at {@code WINDOW_WIDTH - 12}): the panel
+	 * also has to clear the enable switch and the key bind button of a module row, which are the rightmost
+	 * 60 local pixels of the row body. At 34 the panel ends before both, so a module can still be toggled and
+	 * rebound from the keyboard while its parameters are open.</p>
+	 */
+	private static final float PANEL_END_MARGIN = 34.0f;
 	private static final float ROW_HEIGHT = 24.0f;
 	private static final float MODULE_ROW_HEIGHT = 28.0f;
 	private static final float BUTTON_HEIGHT = 20.0f;
@@ -699,12 +706,14 @@ public class ClickGuiScreen extends Screen {
 		RenderUtils.drawRect(context, SIDEBAR_WIDTH, HEADER_HEIGHT, WINDOW_WIDTH - SIDEBAR_WIDTH, 1.0f,
 				Theme.headerDivider());
 
-		// Screen-space clip rectangle for the scrolling body.
+		// Screen-space clip rectangle for the scrolling body. The bounds are in the window's local space, not
+		// screen space: DrawContext.enableScissor applies the matrix on the stack itself, so handing it
+		// toScreenX/Y here would transform the box a second time (see LocalTransform for the longer note).
 		context.enableScissor(
-				Math.round(this.originX + (SIDEBAR_WIDTH + 1.0f) * this.scale),
-				Math.round(this.originY + (HEADER_HEIGHT + 1.0f) * this.scale),
-				Math.round(this.originX + (WINDOW_WIDTH - 1.0f) * this.scale),
-				Math.round(this.originY + (WINDOW_HEIGHT - 1.0f) * this.scale));
+				(int) SIDEBAR_WIDTH + 1,
+				(int) HEADER_HEIGHT + 1,
+				WINDOW_WIDTH - 1,
+				WINDOW_HEIGHT - 1);
 
 		float startY = bodyTop() - this.scroll;
 		float endY = renderBody(context, mouseX, mouseY, startY);
@@ -738,13 +747,17 @@ public class ClickGuiScreen extends Screen {
 	 *
 	 * <p>Deliberately called after the body scissor is released: the panel spans the full body height and clips
 	 * its own scrolling content, which would otherwise be cut short by the body's clip rectangle.</p>
+	 *
+	 * <p>The panel is parked short of the window edge (see {@link #PANEL_END_MARGIN}) so it never covers the
+	 * module row's switch and key bind. It can still cover part of a row's text, which is what the click
+	 * outside to dismiss in {@code mouseClicked} is for.</p>
 	 */
 	private void drawSettingsPanel(DrawContext context, float mouseX, float mouseY) {
 		if (!this.settingsPanel.isOpen()) {
 			return;
 		}
 
-		float panelX = WINDOW_WIDTH - PANEL_RIGHT_MARGIN - ModuleSettingsPanel.WIDTH;
+		float panelX = WINDOW_WIDTH - PANEL_END_MARGIN - ModuleSettingsPanel.WIDTH;
 		float panelY = HEADER_HEIGHT + 12.0f;
 		this.settingsPanel.layout(panelX, panelY, Math.max(120.0f, bodyBottom() - panelY - 12.0f));
 		this.settingsPanel.render(context, mouseX, mouseY);
@@ -1144,9 +1157,18 @@ public class ClickGuiScreen extends Screen {
 		// click —passing the raw screen-space one silently misses whenever the window is scaled.
 		Click localClick = new Click(mouseX, mouseY, click.buttonInfo());
 
-		// The settings panel overlays the module rows, so it consumes clicks before anything underneath.
-		if (this.settingsPanel.mouseClicked(localClick)) {
-			return true;
+		// The settings panel overlays part of the page body, so a click that lands inside it is consumed first.
+		// A click that lands outside dismisses it and then keeps travelling, so the player can close the panel
+		// and hit the module's own switch —which sits just clear of the panel— in a single click. Only the left
+		// button dismisses: a right-click or a middle-click elsewhere must not throw the panel away.
+		if (this.settingsPanel.isOpen()) {
+			if (this.settingsPanel.mouseClicked(localClick)) {
+				return true;
+			}
+
+			if (click.button() == 0) {
+				this.settingsPanel.close();
+			}
 		}
 
 		if (this.closeButton.contains(mouseX, mouseY)) {

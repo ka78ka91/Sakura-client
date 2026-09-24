@@ -25,6 +25,14 @@ public class ColorSetting extends Setting<Integer> {
 		return (get() >>> 24) & 0xFF;
 	}
 
+	/**
+	 * @return {@code true} when this colour carries no alpha at all
+	 *
+	 * <p>Several settings — every HUD element's "Base color" among them — use a fully transparent value as the
+	 * sentinel for "not picked, follow the theme" rather than as a colour in its own right. Callers that paint
+	 * a swatch must check this before drawing the value, and {@link #getDisplayHex()} does the same for the
+	 * read-out.</p>
+	 */
 	public boolean isFullyTransparent() {
 		return getAlpha() == 0;
 	}
@@ -46,8 +54,16 @@ public class ColorSetting extends Setting<Integer> {
 		return String.format(Locale.ROOT, "#%06X", get() & 0xFFFFFF);
 	}
 
+	/**
+	 * @return the hex read-out to show in the UI: the colour, or {@code "Theme"} while this setting is at the
+	 * fully transparent sentinel, so a "not picked" value never renders as the misleading {@code #000000}
+	 */
+	public String getDisplayHex() {
+		return isFullyTransparent() ? "Theme" : getHex();
+	}
+
 	@Override
 	public String displayValue() {
-		return getHex() + " " + (getAlpha() * 100 / 255) + "%";
+		return getDisplayHex() + " " + (getAlpha() * 100 / 255) + "%";
 	}
 }

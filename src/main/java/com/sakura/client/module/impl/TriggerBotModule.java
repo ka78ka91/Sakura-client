@@ -24,8 +24,8 @@ import net.minecraft.util.math.Box;
  * Attacks whatever is under the crosshair.
  *
  * <p>Settings mirror LiquidBounce's {@code ModuleTriggerBot} (GPL-3.0): a range limit, a roll against a chance,
- * a rate limit and optional rotation. The rate limit reuses the same rolling {@link Clicker} window as the
- * auto-clicker.</p>
+ * a rate limit, a weapon-charge floor and optional rotation. The rate limit reuses the same rolling
+ * {@link Clicker} window as the auto-clicker.</p>
  *
  * <p>Rotation goes through {@link RotationManager}, so it can be silent: the hit is aimed server-side while the
  * camera stays where the player left it. {@code Pause On Flag} hands control back to the global
@@ -41,6 +41,10 @@ public final class TriggerBotModule extends Module {
 			"ms"));
 	private final RangeSetting cps = setting(new RangeSetting("CPS",
 			"Attacks per second, rolled inside this range each time.", 8.0, 12.0, 1.0, 20.0, true, ""));
+	private final NumberSetting cooldown = setting(new NumberSetting("Cooldown",
+			"Hold the attack until the weapon is at least this charged. Vanilla scales attack damage by the "
+					+ "attack cooldown, so attacking on a half-charged weapon hits for less than waiting.",
+			0.9, 0.0, 1.0, 0.05, ""));
 	private final ChanceSetting chance = setting(new ChanceSetting("Chance",
 			"Chance of attacking a target that is in range.", 100.0));
 	private final BooleanSetting rotate = setting(new BooleanSetting("Rotate",
@@ -137,6 +141,13 @@ public final class TriggerBotModule extends Module {
 		}
 
 		if (!this.chance.roll()) {
+			return;
+		}
+
+		// Vanilla scales attack damage by the weapon's charge, and swallows the attack outright below its own
+		// minimum, so a hit fired on a recharging weapon costs a click and lands for less. The rate limit
+		// above is a ceiling, not a promise that the weapon is ready.
+		if (client.player.getAttackCooldownProgress(0.5f) < this.cooldown.get()) {
 			return;
 		}
 
