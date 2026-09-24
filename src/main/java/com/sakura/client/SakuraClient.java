@@ -17,6 +17,7 @@ import com.sakura.client.hud.element.PotionHudElement;
 import com.sakura.client.hud.element.TargetHudElement;
 import com.sakura.client.module.Module;
 import com.sakura.client.module.ModuleManager;
+import com.sakura.client.module.impl.AimbotModule;
 import com.sakura.client.module.impl.AutoClickerModule;
 import com.sakura.client.module.impl.AutoTotemModule;
 import com.sakura.client.module.impl.AutoWeaponModule;
@@ -88,6 +89,7 @@ public class SakuraClient implements ClientModInitializer {
 		Module.setToggleListener(NotificationManager::showModuleToggle);
 
 		// Feature modules.
+		ModuleManager.register(new AimbotModule());
 		ModuleManager.register(new AutoClickerModule());
 		ModuleManager.register(new AutoTotemModule());
 		ModuleManager.register(new AutoWeaponModule());
