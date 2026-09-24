@@ -3,6 +3,8 @@ package com.sakura.client.hud;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.module.Category;
 import com.sakura.client.module.Module;
+import com.sakura.client.render.Theme;
+import com.sakura.client.setting.ColorSetting;
 import net.minecraft.client.gui.DrawContext;
 
 /**
@@ -28,6 +30,21 @@ public abstract class HudModule extends Module {
 		this.anchor = anchor;
 		this.defaultOffsetX = offsetX;
 		this.defaultOffsetY = offsetY;
+	}
+
+	/**
+	 * The element's base colour, shared by every HUD element: fully transparent (the default) means the
+	 * element follows the theme; picking an opaque colour overrides the theme for this element alone.
+	 */
+	protected final ColorSetting baseColor = setting(new ColorSetting("Base color",
+			"Transparent = follow the theme", 0x00000000));
+
+	/**
+	 * @return the element's base colour when one is picked, else {@code themeFallback} — the standard way
+	 * an element colours any surface that the base colour is allowed to take over
+	 */
+	protected final int themed(int themeFallback) {
+		return this.baseColor.isFullyTransparent() ? themeFallback : this.baseColor.get();
 	}
 
 	public final HudAnchor getAnchor() {

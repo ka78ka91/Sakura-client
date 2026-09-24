@@ -6,16 +6,22 @@ import com.sakura.client.hud.HudModule;
 import com.sakura.client.render.Animations;
 import com.sakura.client.render.RenderUtils;
 import com.sakura.client.render.RenderUtils.Align;
+import com.sakura.client.render.Theme;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 
 /**
- * Frames-per-second read-out.
+ * Frames-per-second read-out, and the template for per-element appearance settings.
  *
  * <p>The number on screen is eased toward the value the client reports, because the raw counter jumps by
  * several frames every time the render loop hiccups and a read-out that flickers between 240 and 190 is
  * unreadable. The colour follows the smoothed value as well, so it drifts from green to amber to red as the
  * frame rate falls rather than flipping between them.</p>
+ *
+ * <p>Appearance follows the pattern every HUD element copies: the inherited "Base color" setting wins
+ * wherever the player picked an opaque colour, and every unpicked surface resolves through
+ * {@code themed(...)} to the theme. The temperature ramp on the read-out is data visualisation and only
+ * yields to an explicit base colour, never to the theme.</p>
  */
 public class FpsElement extends HudModule {
 
@@ -28,17 +34,10 @@ public class FpsElement extends HudModule {
 	/** Frame rates at or below this count as unplayable, at or above the second one as flawless. */
 	private static final float BAD_FPS = 30.0f;
 	private static final float GOOD_FPS = 120.0f;
-
-	private static final int TEXT_DIM = 0xFFAAAAAA;
 	private static final int FPS_LOW = 0xFFFF5A5A;
 	private static final int FPS_MID = 0xFFFFC04D;
 	private static final int FPS_HIGH = 0xFF6BE89A;
 
-	/** Glass body: a dark, slightly cool gradient drawn over the blurred world. */
-	private static final int GLASS_TOP = 0xB414141A;
-	private static final int GLASS_BOTTOM = 0x8C0A0A0F;
-	private static final int GLASS_BORDER = 0x2EFFFFFF;
-	private static final int GLASS_SHADOW = 0x66000000;
 	private static final float GLASS_SHADOW_SPREAD = 4.0f;
 
 	private final Animations.Clock clock = new Animations.Clock();
@@ -77,9 +76,9 @@ public class FpsElement extends HudModule {
 		drawGlass(context, x, y, PANEL_WIDTH, PANEL_HEIGHT, radius);
 
 		RenderUtils.drawTextVCentered(context, String.valueOf(Math.round(this.shownFps)),
-				x + PANEL_WIDTH - PADDING_X, y, PANEL_HEIGHT, fpsColor(this.shownFps), true, Align.RIGHT);
+				x + PANEL_WIDTH - PADDING_X, y, PANEL_HEIGHT, themed(fpsColor(this.shownFps)), true, Align.RIGHT);
 		RenderUtils.drawTextVCentered(context, "FPS", x + PADDING_X, y, PANEL_HEIGHT,
-				TEXT_DIM, true, Align.LEFT);
+				themed(Theme.textDim()), true, Align.LEFT);
 	}
 
 	/** @return the colour of the read-out: red on a stuttering client, green on a smooth one */
@@ -94,7 +93,7 @@ public class FpsElement extends HudModule {
 	/** The shared Sakura glass material: gradient body, hairline border, drop shadow and an accent wash. */
 	private static void drawGlass(DrawContext context, float x, float y, float width, float height, float radius) {
 		RenderUtils.drawGlassPanel(context, x, y, width, height, radius,
-				GLASS_TOP, GLASS_BOTTOM, GLASS_BORDER, GLASS_SHADOW, GLASS_SHADOW_SPREAD);
+				Theme.glassTop(), Theme.glassBottom(), Theme.glassBorder(), Theme.glassShadow(), GLASS_SHADOW_SPREAD);
 		RenderUtils.drawAccentWash(context, x, y, width, height, radius, ConfigManager.get().accentColor, 1.0f);
 	}
 }
