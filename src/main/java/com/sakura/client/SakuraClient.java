@@ -156,6 +156,11 @@ public class SakuraClient implements ClientModInitializer {
 		}
 	}
 
+	/** Re-applies per-module parameter values from the live config; used by the GUI after a profile switch. */
+	public static void applyModuleSettings() {
+		applyModuleSettings(ConfigManager.get());
+	}
+
 	/**
 	 * Writes every module's parameters back to the config file.
 	 *

@@ -13,6 +13,11 @@ import java.util.Map;
 public class SakuraConfig {
 
 	// ---------------------------------------------------------------- appearance
+	/**
+	 * On-disk format version, bumped whenever a migration needs to tell old files from new ones.
+	 * Written into every save and ignored on read for now; future format changes branch on it.
+	 */
+	public int schemaVersion = 1;
 	/** UI accent, packed ARGB. Defaults to the prototype's purple. */
 	public int accentColor = 0xFFA06EFF;
 	public boolean descriptions = true;
@@ -25,6 +30,8 @@ public class SakuraConfig {
 	 */
 	public float guiScale = 1.0f;
 	public String moduleSettingsPanel = "Side panel";
+	/** Sidebar page the menu reopens on: a {@code Category} or {@code ClickGuiScreen.UtilityPage} enum name. */
+	public String lastGuiPage = "Settings";
 
 	// -------------------------------------------------------------------- modules
 	public Map<String, Boolean> moduleStates = new HashMap<>();
@@ -54,5 +61,30 @@ public class SakuraConfig {
 			this.x = x;
 			this.y = y;
 		}
+	}
+
+	/**
+	 * Copies every field from {@code other} into this instance.
+	 *
+	 * <p>ConfigManager keeps one live config object for the whole session and parses files into a temporary
+	 * instance first; copying fields in place means a holder of the live object never ends up mutating a
+	 * stale copy the persistence layer no longer writes out.</p>
+	 */
+	void copyFrom(SakuraConfig other) {
+		this.schemaVersion = other.schemaVersion;
+		this.accentColor = other.accentColor;
+		this.descriptions = other.descriptions;
+		this.hudCornerRadius = other.hudCornerRadius;
+		this.guiScale = other.guiScale;
+		this.moduleSettingsPanel = other.moduleSettingsPanel;
+		this.lastGuiPage = other.lastGuiPage;
+		this.moduleStates.clear();
+		this.moduleStates.putAll(other.moduleStates);
+		this.moduleKeybinds.clear();
+		this.moduleKeybinds.putAll(other.moduleKeybinds);
+		this.moduleSettings.clear();
+		this.moduleSettings.putAll(other.moduleSettings);
+		this.hudPositions.clear();
+		this.hudPositions.putAll(other.hudPositions);
 	}
 }

@@ -1,5 +1,6 @@
 package com.sakura.client.gui;
 
+import com.sakura.client.SakuraClient;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.config.SakuraConfig;
 import com.sakura.client.gui.widget.ColorPickerWidget;
@@ -251,6 +252,7 @@ public class ClickGuiScreen extends Screen {
 		this.hudRadiusSlider.setFromRange(config.hudCornerRadius, 0.0f, MAX_HUD_RADIUS);
 		this.guiScaleSlider.setFromRange(config.guiScale, MIN_GUI_SCALE, MAX_GUI_SCALE);
 		this.moduleSettingsDropdown.setSelectedIndex(indexOfPanel(config.moduleSettingsPanel));
+		this.selected = resolvePage(config.lastGuiPage);
 	}
 
 	private int indexOfPanel(String panel) {
@@ -263,6 +265,30 @@ public class ClickGuiScreen extends Screen {
 		}
 
 		return 0;
+	}
+
+	/**
+	 * Turns the stored page name back into the sidebar target it names.
+	 *
+	 * <p>Pages persist as enum names, so reordering the sidebar cannot silently redirect them; a name that
+	 * no longer resolves —a removed category, a hand-edited file —falls back to Settings.</p>
+	 */
+	private static Target resolvePage(String stored) {
+		if (stored != null && !stored.isBlank()) {
+			for (Category category : Category.values()) {
+				if (category.name().equals(stored)) {
+					return Target.of(category);
+				}
+			}
+
+			for (UtilityPage page : UtilityPage.values()) {
+				if (page.name().equals(stored)) {
+					return Target.of(page);
+				}
+			}
+		}
+
+		return Target.of(UtilityPage.SETTINGS);
 	}
 
 	/** Copies widget state back into the config and writes it to disk. */
@@ -292,8 +318,34 @@ public class ClickGuiScreen extends Screen {
 		loadFromConfig();
 	}
 
+	/**
+	 * Switches the active profile and re-applies everything the config drives, mirroring
+	 * {@link #reloadConfig()}: module state, module settings, HUD positions and the widget values.
+	 */
+	private void switchToProfile(String profile) {
+		// Persist the current edits first, so the snapshot switchProfile takes of the outgoing profile
+		// includes them rather than whatever the last save happened to catch.
+		persistSettings();
+
+		if (!ConfigManager.switchProfile(profile)) {
+			return;
+		}
+
+		SakuraConfig config = ConfigManager.get();
+		ModuleManager.applyPersistedState(config.moduleStates, config.moduleKeybinds);
+		SakuraClient.applyModuleSettings();
+		HudManager.loadPositions();
+		loadFromConfig();
+	}
+
 	@Override
 	public void close() {
+		// Remember the page the menu was on, so reopening it lands where the player left instead of always
+		// falling back to Settings.
+		SakuraConfig config = ConfigManager.get();
+		config.lastGuiPage = this.selected.category() != null
+				? this.selected.category().name()
+				: this.selected.page().name();
 		persistSettings();
 		super.close();
 	}
@@ -802,6 +854,31 @@ public class ClickGuiScreen extends Screen {
 		next = button(context, "Reload", next + 8.0f, rowY, 68.0f, mouseX, mouseY, this::reloadConfig);
 		button(context, "Reset", next + 8.0f, rowY, 68.0f, mouseX, mouseY, this::resetConfig);
 		y = file.bottom() + SECTION_GAP;
+
+		// ---- Profiles ----------------------------------------------------------
+		List<String> profileNames = ConfigManager.listProfiles();
+		float profilesBody = SECTION_PADDING + 16.0f + profileNames.size() * (BUTTON_HEIGHT + 6.0f)
+				+ SECTION_PADDING;
+		Rect profilesSection = drawSection(context, "Profiles", y, width, profilesBody);
+		float profileX = profilesSection.x() + SECTION_PADDING;
+		float profileY = profilesSection.y() + SECTION_HEADER_HEIGHT + SECTION_PADDING;
+
+		RenderUtils.drawText(context, "Active: " + ConfigManager.getActiveProfile(), profileX, profileY,
+				TEXT_DIM, false);
+		profileY += 16.0f;
+
+		for (String profile : profileNames) {
+			float nextProfile = button(context, profile, profileX, profileY, 110.0f, mouseX, mouseY,
+					() -> switchToProfile(profile));
+
+			if (profile.equals(ConfigManager.getActiveProfile())) {
+				RenderUtils.drawText(context, "active", nextProfile + 8.0f, profileY + 3.0f, TEXT_FAINT, false);
+			}
+
+			profileY += BUTTON_HEIGHT + 6.0f;
+		}
+
+		y = profilesSection.bottom() + SECTION_GAP;
 
 		// ---- HUD positions ----------------------------------------------------
 		List<HudModule> elements = HudManager.getElements();

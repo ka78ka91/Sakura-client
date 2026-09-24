@@ -2,7 +2,7 @@ package com.sakura.client.hud;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.fabricmc.loader.api.FabricLoader;
+import com.sakura.client.config.ConfigPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +88,13 @@ public final class SmtcMusicProvider implements MusicProvider {
 			return new MockMusicProvider();
 		}
 
-		Path directory = FabricLoader.getInstance().getConfigDir().resolve("sakura");
+		Path directory = ConfigPaths.getMediaDir();
+
+		// Anything the pre-isolation layout wrote still sits in config/sakura/; adopt it before deciding the
+		// bridge is starting fresh, so cover art and the command pipe survive the move.
+		ConfigPaths.migrateLegacyMediaFile(SCRIPT_NAME);
+		ConfigPaths.migrateLegacyMediaFile(ARTWORK_FILE);
+		ConfigPaths.migrateLegacyMediaFile(COMMAND_FILE);
 
 		try {
 			SmtcMusicProvider provider = new SmtcMusicProvider(directory);
