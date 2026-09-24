@@ -398,7 +398,7 @@ public class MusicPlayerElement extends HudModule {
 					RenderUtils.withAlpha(this.accent, Math.round(58.0f * this.alpha)),
 					RenderUtils.withAlpha(this.accent, Math.round(20.0f * this.alpha)), 12);
 			RenderUtils.drawText(context, "\u266A", x + ART_SIZE * 0.5f, y + ART_SIZE * 0.5f - 5.0f,
-					RenderUtils.withAlpha(Theme.text(), Math.round(150.0f * this.alpha)), false, Align.CENTER);
+					RenderUtils.withAlpha(themed(Theme.text()), Math.round(150.0f * this.alpha)), false, Align.CENTER);
 		}
 
 		RenderUtils.drawBorder(context, x, y, ART_SIZE, ART_SIZE, ART_RADIUS, 1.0f,
@@ -427,11 +427,11 @@ public class MusicPlayerElement extends HudModule {
 		if (!hasTrack) {
 			title = available ? "Nothing playing" : "Media session unavailable";
 			subtitle = available ? "Start music in any player" : "Restart the game to retry";
-			titleColor = RenderUtils.withAlpha(Theme.textDim(), Math.round(255.0f * this.alpha));
+			titleColor = RenderUtils.withAlpha(themed(Theme.textDim()), Math.round(255.0f * this.alpha));
 		} else {
 			title = provider.getTitle();
 			subtitle = this.artist.get() ? provider.getArtist() : null;
-			titleColor = RenderUtils.withAlpha(Theme.text(), Math.round(255.0f * this.alpha));
+			titleColor = RenderUtils.withAlpha(themed(Theme.text()), Math.round(255.0f * this.alpha));
 		}
 
 		float titleWidth = TEXT_COLUMN - appWidth;
@@ -442,13 +442,13 @@ public class MusicPlayerElement extends HudModule {
 
 		if (app != null) {
 			RenderUtils.drawText(context, app, PANEL_WIDTH - PADDING, PADDING + 2.0f,
-					RenderUtils.withAlpha(Theme.textFaint(), Math.round(210.0f * this.alpha)), false, Align.RIGHT);
+					RenderUtils.withAlpha(themed(Theme.textFaint()), Math.round(210.0f * this.alpha)), false, Align.RIGHT);
 		}
 
 		if (subtitle != null && !subtitle.isEmpty()) {
 			RenderUtils.drawText(context, RenderUtils.trimToWidth(subtitle, TEXT_COLUMN), textX,
 					PADDING + 14.0f,
-					RenderUtils.withAlpha(Theme.textDim(), Math.round(235.0f * this.alpha)), false);
+					RenderUtils.withAlpha(themed(Theme.textDim()), Math.round(235.0f * this.alpha)), false);
 		}
 	}
 
@@ -475,7 +475,7 @@ public class MusicPlayerElement extends HudModule {
 
 		String times = formatTime(this.displayedMillis) + " / " + formatTime(duration);
 		RenderUtils.drawText(context, times, PANEL_WIDTH - PADDING, barY - 12.0f,
-				RenderUtils.withAlpha(Theme.textDim(), Math.round(215.0f * this.alpha)), false, Align.RIGHT);
+				RenderUtils.withAlpha(themed(Theme.textDim()), Math.round(215.0f * this.alpha)), false, Align.RIGHT);
 
 		RenderUtils.drawProgressBar(context, textX, barY, TEXT_COLUMN, BAR_HEIGHT, fraction,
 				RenderUtils.multiplyAlpha(TRACK, this.alpha),
@@ -489,7 +489,7 @@ public class MusicPlayerElement extends HudModule {
 					RenderUtils.withAlpha(this.accent, Math.round(120.0f * this.alpha)));
 			RenderUtils.drawRoundedRect(context, headX - 1.5f, barY - 1.5f, 3.0f,
 					BAR_HEIGHT + 3.0f, 1.5f,
-					RenderUtils.withAlpha(Theme.text(), Math.round(240.0f * this.alpha)));
+					RenderUtils.withAlpha(themed(Theme.text()), Math.round(240.0f * this.alpha)));
 		}
 	}
 
@@ -502,7 +502,7 @@ public class MusicPlayerElement extends HudModule {
 
 		RenderUtils.drawRoundedRect(context, x, y, size, size, 4.5f, background);
 
-		int colour = RenderUtils.withAlpha(Theme.text(), Math.round(245.0f * this.alpha));
+		int colour = RenderUtils.withAlpha(themed(Theme.text()), Math.round(245.0f * this.alpha));
 		float centreY = y + size * 0.5f;
 
 		if (playing) {
@@ -541,7 +541,7 @@ public class MusicPlayerElement extends HudModule {
 
 		for (Control control : Control.values()) {
 			boolean pointed = control == this.pressed;
-			int colour = RenderUtils.withAlpha(Theme.text(), Math.round((pointed ? 255.0f : 225.0f) * eased * this.alpha));
+			int colour = RenderUtils.withAlpha(themed(Theme.text()), Math.round((pointed ? 255.0f : 225.0f) * eased * this.alpha));
 
 			if (pointed) {
 				RenderUtils.drawRoundedRect(context, control.x - 1.0f, control.y - 1.0f,

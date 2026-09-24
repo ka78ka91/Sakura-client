@@ -41,7 +41,6 @@ public class KeystrokesElement extends HudModule {
 
 	private static final int KEY_BORDER = 0x1AFFFFFF;
 	private static final int KEY_BORDER_PRESSED = 0x66FFFFFF;
-	private static final int KEY_TEXT = 0xFFFFFFFF;
 	private static final int KEY_TEXT_PRESSED = 0xFF121216;
 	/** A held key turns into white frosted glass instead of simply changing colour. */
 	private static final int KEY_GLASS_PRESSED_TOP = 0xE6FFFFFF;
@@ -157,10 +156,11 @@ public class KeystrokesElement extends HudModule {
 	 *
 	 * @param pressAmount 0 while released, 1 while held; everything that reacts to the key reads this
 	 */
-	private static void drawKey(DrawContext context, float x, float y, float width, float height, String label,
-								String subLabel, float pressAmount) {
+	private void drawKey(DrawContext context, float x, float y, float width, float height, String label,
+						 String subLabel, float pressAmount) {
 		float eased = Animations.easeOutCubic(pressAmount);
-		int textColor = RenderUtils.mix(KEY_TEXT, KEY_TEXT_PRESSED, eased);
+		// The released key honours the element's base colour; the pressed state stays white-on-light glass.
+		int textColor = RenderUtils.mix(themed(Theme.text()), KEY_TEXT_PRESSED, eased);
 
 		RenderUtils.drawGlassPanel(context, x, y, width, height, KEY_RADIUS,
 				RenderUtils.mix(Theme.glassTop(), KEY_GLASS_PRESSED_TOP, eased),

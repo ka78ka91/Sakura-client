@@ -312,11 +312,11 @@ public final class TargetHudElement extends HudModule {
 
 		if (this.showDistance.get()) {
 			RenderUtils.drawTextVCentered(context, this.shownDistance, right, y + TEXT_Y, TEXT_BOX,
-					RenderUtils.multiplyAlpha(Theme.textDim(), alpha), true, Align.RIGHT);
+					RenderUtils.multiplyAlpha(themed(Theme.textDim()), alpha), true, Align.RIGHT);
 		}
 
 		RenderUtils.drawMarqueeText(context, this.shownName, x + PADDING, textY, nameBoxWidth(),
-				this.marqueeOffset, RenderUtils.multiplyAlpha(Theme.text(), alpha), true);
+				this.marqueeOffset, RenderUtils.multiplyAlpha(themed(Theme.text()), alpha), true);
 		RenderUtils.drawTextVCentered(context,
 				String.format(Locale.ROOT, "%.1f", this.shownHealth * this.shownMaxHealth), right,
 				y + BAR_TOP - (TEXT_BOX - BAR_HEIGHT) * 0.5f, TEXT_BOX,

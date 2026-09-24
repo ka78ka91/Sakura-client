@@ -185,13 +185,15 @@ public final class ArmorHudElement extends HudModule {
 	}
 
 	/** The shared Sakura glass material: gradient body, hairline border, drop shadow and an accent wash. */
-	private static void drawGlass(DrawContext context, float x, float y, float width, float height,
-								  float radius, float alpha) {
+	private void drawGlass(DrawContext context, float x, float y, float width, float height,
+						   float radius, float alpha) {
 		RenderUtils.drawGlassPanel(context, x, y, width, height, radius,
 				RenderUtils.multiplyAlpha(Theme.glassTop(), alpha), RenderUtils.multiplyAlpha(Theme.glassBottom(), alpha),
 				RenderUtils.multiplyAlpha(Theme.glassBorder(), alpha), RenderUtils.multiplyAlpha(Theme.glassShadow(), alpha),
 				GLASS_SHADOW_SPREAD);
+		// Armor draws no text, so its base colour takes over the accent wash instead — the one visible
+		// tint the player can claim for this element.
 		RenderUtils.drawAccentWash(context, x, y, width, height, radius,
-				ConfigManager.get().accentColor, alpha);
+				themed(ConfigManager.get().accentColor), alpha);
 	}
 }

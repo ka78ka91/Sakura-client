@@ -161,7 +161,7 @@ public final class PingTpsElement extends HudModule {
 
 		if (this.tps.get()) {
 			RenderUtils.drawTextVCentered(context, tpsText(), right, y, PANEL_HEIGHT,
-					this.tpsPrimed ? tpsColor(this.shownTps) : Theme.textDim(), true, Align.RIGHT);
+					this.tpsPrimed ? tpsColor(this.shownTps) : themed(Theme.textDim()), true, Align.RIGHT);
 			right -= tpsTextWidth();
 		}
 
@@ -173,7 +173,7 @@ public final class PingTpsElement extends HudModule {
 
 		if (this.ping.get()) {
 			RenderUtils.drawTextVCentered(context, pingText(), right, y, PANEL_HEIGHT,
-					!this.pingPrimed ? Theme.textDim() : pingColor(this.shownPing), true, Align.RIGHT);
+					!this.pingPrimed ? themed(Theme.textDim()) : pingColor(this.shownPing), true, Align.RIGHT);
 		}
 	}
 

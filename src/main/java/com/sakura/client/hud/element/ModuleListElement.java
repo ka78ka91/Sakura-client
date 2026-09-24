@@ -231,7 +231,7 @@ public class ModuleListElement extends HudModule {
 		}
 	}
 
-	private static void drawRow(DrawContext context, Row row, float x, float y, float width, float radius,
+	private void drawRow(DrawContext context, Row row, float x, float y, float width, float radius,
 								float alpha) {
 		RenderUtils.drawGlassPanel(context, x, y, width, ROW_HEIGHT, radius,
 				RenderUtils.multiplyAlpha(Theme.glassTop(), alpha), RenderUtils.multiplyAlpha(Theme.glassBottom(), alpha),
@@ -247,7 +247,7 @@ public class ModuleListElement extends HudModule {
 		String suffix = row.module.getHudSuffix();
 		float textX = x + width - PADDING_X;
 		float textY = y + (ROW_HEIGHT - RenderUtils.fontHeight()) / 2.0f + 1.0f;
-		int nameColor = RenderUtils.multiplyAlpha(Theme.text(), alpha);
+		int nameColor = RenderUtils.multiplyAlpha(themed(Theme.text()), alpha);
 
 		if (suffix == null) {
 			RenderUtils.drawText(context, row.module.getName(), textX, textY, nameColor, true, Align.RIGHT);
@@ -259,7 +259,7 @@ public class ModuleListElement extends HudModule {
 		RenderUtils.drawText(context, row.module.getName(), textX - suffixWidth, textY,
 				nameColor, true, Align.RIGHT);
 		RenderUtils.drawText(context, suffix, textX, textY,
-				RenderUtils.multiplyAlpha(Theme.textDim(), alpha), true, Align.RIGHT);
+				RenderUtils.multiplyAlpha(themed(Theme.textDim()), alpha), true, Align.RIGHT);
 	}
 
 	private static float rowWidth(Module module) {

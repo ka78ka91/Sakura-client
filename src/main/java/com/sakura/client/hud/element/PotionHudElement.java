@@ -304,11 +304,11 @@ public final class PotionHudElement extends HudModule {
 				RenderUtils.multiplyAlpha(accent, rowAlpha));
 
 		RenderUtils.drawTextVCentered(context, label(effect), nameX, y, ROW_TEXT_HEIGHT,
-				RenderUtils.multiplyAlpha(Theme.text(), rowAlpha), true, Align.LEFT);
+				RenderUtils.multiplyAlpha(themed(Theme.text()), rowAlpha), true, Align.LEFT);
 
 		if (this.showDuration.get()) {
 			RenderUtils.drawTextVCentered(context, duration(effect), right, y, ROW_TEXT_HEIGHT,
-					RenderUtils.multiplyAlpha(Theme.textDim(), rowAlpha), true, Align.RIGHT);
+					RenderUtils.multiplyAlpha(themed(Theme.textDim()), rowAlpha), true, Align.RIGHT);
 		}
 
 		RenderUtils.drawProgressBar(context, x + PADDING, y + ROW_HEIGHT - ROW_BAR_HEIGHT - 1.0f,

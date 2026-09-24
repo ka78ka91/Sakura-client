@@ -95,7 +95,7 @@ public class CoordinatesElement extends HudModule {
 		float room = PANEL_WIDTH - PADDING_X - ACCENT_PILL_INSET - ACCENT_PILL_WIDTH - 3.0f;
 
 		RenderUtils.drawTextVCentered(context, RenderUtils.trimToWidth(text, room), x + PANEL_WIDTH - PADDING_X,
-				y, PANEL_HEIGHT, Theme.text(), true, Align.RIGHT);
+				y, PANEL_HEIGHT, themed(Theme.text()), true, Align.RIGHT);
 	}
 
 	/** The shared Sakura glass material: gradient body, hairline border, drop shadow and an accent wash. */
