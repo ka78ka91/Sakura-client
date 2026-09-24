@@ -10,6 +10,8 @@ import com.sakura.client.setting.RangeSetting;
 import com.sakura.client.setting.Tagged;
 import net.minecraft.client.MinecraftClient;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 /**
  * Clicks for the player at a configurable rate.
  *
@@ -90,9 +92,25 @@ public final class AutoClickerModule extends Module {
 		}
 	}
 
-	/** @return milliseconds until the next click, rolled inside the configured range */
+	/**
+	 * @return milliseconds until the next click
+	 *
+	 * <p>Interim humanisation until the SafetyManager lands its log-normal distribution: the interval rolled
+	 * from the CPS range gets a &plusmn;20% multiplicative jitter plus a small chance of a pause about twice
+	 * as long, so the gaps stop reading as a metronome. The result is clamped to the fastest interval the
+	 * configured range allows, so the jitter can never push the rate past its own ceiling.</p>
+	 */
 	private long delay() {
-		return 1000L / Math.max(1, this.cps.randomInt());
+		ThreadLocalRandom random = ThreadLocalRandom.current();
+		long base = 1000L / Math.max(1, this.cps.randomInt());
+		long fastest = 1000L / Math.max(1, (int) Math.round(this.cps.getUpper()));
+		long jittered = (long) (base * random.nextDouble(0.8, 1.2));
+
+		if (random.nextDouble() < 0.05) {
+			jittered *= 2L;
+		}
+
+		return Math.max(fastest, jittered);
 	}
 
 	/** When the clicker is allowed to click. */

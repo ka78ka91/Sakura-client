@@ -1,5 +1,6 @@
 package com.sakura.client.gui.widget;
 
+import com.sakura.client.render.Animations;
 import com.sakura.client.render.RenderUtils;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -7,9 +8,9 @@ import net.minecraft.client.gui.DrawContext;
 /**
  * Capsule switch (36x20) with a smoothly animated knob.
  *
- * <p>The knob position is an animation factor rather than a boolean, so the transition is a simple
- * exponential approach towards the target —{@code factor += (target - factor) * 0.2} on every frame,
- * which is the classic {@code transition: 0.3s} feel of the prototype.</p>
+ * <p>The knob position is an animation factor rather than a boolean, so the transition is an exponential
+ * approach towards the target driven by the frame delta —the same {@code transition: 0.3s} feel of the
+ * prototype, but it plays out identically on every refresh rate.</p>
  */
 public class ToggleWidget implements GuiWidget {
 
@@ -18,13 +19,16 @@ public class ToggleWidget implements GuiWidget {
 	private static final float RADIUS = HEIGHT / 2.0f;
 	private static final float KNOB_RADIUS = 7.0f;
 	private static final float KNOB_INSET = 3.0f;
-	private static final float LERP_FACTOR = 0.2f;
+	/** E-folds per second, matching the feel of the 0.2-per-frame factor the widget used at 60 fps. */
+	private static final float ANIMATION_SPEED = 13.4f;
 	private static final float ANIMATION_EPSILON = 0.001f;
 
 	private static final int ON_COLOR = 0xFFA06EFF;
 	private static final int OFF_COLOR = 0x1AFFFFFF;
 	private static final int KNOB_COLOR = 0xFFFFFFFF;
 	private static final int OUTLINE = 0x14FFFFFF;
+
+	private final Animations.Clock clock = new Animations.Clock();
 
 	private boolean on;
 	private float animation;
@@ -73,11 +77,11 @@ public class ToggleWidget implements GuiWidget {
 		this.y = y;
 
 		float target = this.on ? 1.0f : 0.0f;
-		this.animation += (target - this.animation) * LERP_FACTOR;
 
-		if (Math.abs(target - this.animation) < ANIMATION_EPSILON) {
-			this.animation = target;
-		}
+		// Exponential approach over the wall-clock delta, so the knob arrives at the same moment on any
+		// refresh rate; a per-frame factor animates four times faster on a 240 Hz screen than on 60 Hz.
+		this.animation = Animations.approach(this.animation, target, ANIMATION_SPEED, this.clock.tick(),
+				ANIMATION_EPSILON);
 
 		RenderUtils.drawRoundedRect(context, x, y, WIDTH, HEIGHT, RADIUS, lerpColor(OFF_COLOR, ON_COLOR, this.animation));
 		RenderUtils.drawBorder(context, x, y, WIDTH, HEIGHT, RADIUS, 1.0f, OUTLINE);

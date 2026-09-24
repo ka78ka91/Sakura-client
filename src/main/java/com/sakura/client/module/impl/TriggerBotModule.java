@@ -36,6 +36,9 @@ public final class TriggerBotModule extends Module {
 
 	private final NumberSetting range = setting(new NumberSetting("Range",
 			"Only attack targets closer than this.", 3.0, 1.0, 6.0, 0.1, "blocks"));
+	private final NumberSetting reactionDelay = setting(new NumberSetting("Reaction Delay",
+			"Time between a target entering the crosshair and the first attack.", 150.0, 0.0, 500.0, 10.0,
+			"ms"));
 	private final RangeSetting cps = setting(new RangeSetting("CPS",
 			"Attacks per second, rolled inside this range each time.", 8.0, 12.0, 1.0, 20.0, true, ""));
 	private final ChanceSetting chance = setting(new ChanceSetting("Chance",
@@ -60,6 +63,7 @@ public final class TriggerBotModule extends Module {
 
 	private final Clicker clicker = new Clicker();
 	private LivingEntity target;
+	private long acquiredAt;
 	private long nextClickAt;
 
 	public TriggerBotModule() {
@@ -105,8 +109,15 @@ public final class TriggerBotModule extends Module {
 			return;
 		}
 
+		long now = System.currentTimeMillis();
 		LivingEntity found = findTarget(client);
-		this.target = found;
+
+		// A newly acquired target starts a fresh reaction window; without it the first attack lands on the
+		// tick right after acquisition, faster than any player reacts.
+		if (found != this.target) {
+			this.target = found;
+			this.acquiredAt = now;
+		}
 
 		if (found == null) {
 			return;
@@ -117,7 +128,9 @@ public final class TriggerBotModule extends Module {
 					this.rotations);
 		}
 
-		long now = System.currentTimeMillis();
+		if (now - this.acquiredAt < this.reactionDelay.intValue()) {
+			return;
+		}
 
 		if (now < this.nextClickAt) {
 			return;

@@ -64,6 +64,9 @@ public class SakuraClient implements ClientModInitializer {
 
 	private static final Set<Integer> KEYS_DOWN_LAST_TICK = new HashSet<>();
 
+	/** True while the previous tick saw an open screen; the tick after it closes re-baselines quietly. */
+	private static boolean screenWasOpen;
+
 	private static KeyBinding clickGuiKey;
 	private static boolean restored;
 	private static boolean settingsDirty;
@@ -98,7 +101,8 @@ public class SakuraClient implements ClientModInitializer {
 		ModuleManager.register(new TriggerBotModule());
 		ModuleManager.register(new VelocityModule());
 
-		// HUD elements are modules too, so they can be toggled and bound like anything else.
+		// HUD elements are modules too, so they can be toggled and bound like anything else. None of them
+		// is enabled by default: a fresh install renders nothing until the player opts in.
 		HudManager.register(new MusicPlayerElement());
 		HudManager.register(new ModuleListElement());
 		HudManager.register(new KeystrokesElement());
@@ -213,6 +217,7 @@ public class SakuraClient implements ClientModInitializer {
 	private static void pollModuleKeybinds(MinecraftClient client) {
 		if (client.currentScreen != null || client.getWindow() == null) {
 			KEYS_DOWN_LAST_TICK.clear();
+			screenWasOpen = true;
 			return;
 		}
 
@@ -228,6 +233,19 @@ public class SakuraClient implements ClientModInitializer {
 			boolean down = InputUtil.isKeyPressed(window, code);
 			boolean wasDown = KEYS_DOWN_LAST_TICK.contains(code);
 
+			if (screenWasOpen) {
+				// The first tick after a screen closes re-baselines instead of firing: a key held inside
+				// the menu (the GUI key itself, a movement key) would otherwise read as a fresh press the
+				// moment the screen is gone and toggle its module without the player ever releasing it.
+				if (down) {
+					KEYS_DOWN_LAST_TICK.add(code);
+				} else {
+					KEYS_DOWN_LAST_TICK.remove(code);
+				}
+
+				continue;
+			}
+
 			if (down && !wasDown && ModuleManager.handleKeybind(code)) {
 				changed = true;
 			}
@@ -238,6 +256,8 @@ public class SakuraClient implements ClientModInitializer {
 				KEYS_DOWN_LAST_TICK.remove(code);
 			}
 		}
+
+		screenWasOpen = false;
 
 		if (changed) {
 			persistModuleStates();

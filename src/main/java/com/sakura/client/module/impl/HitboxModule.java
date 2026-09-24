@@ -4,6 +4,7 @@ import com.sakura.client.module.Category;
 import com.sakura.client.module.Module;
 import com.sakura.client.setting.BooleanSetting;
 import com.sakura.client.setting.NumberSetting;
+import com.sakura.client.setting.Risk;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -42,6 +43,16 @@ public final class HitboxModule extends Module {
 	@Override
 	public String getHudSuffix() {
 		return isEnabled() ? formatSize() : null;
+	}
+
+	/**
+	 * A wider targeting margin is invisible to the server for as long as every hit lands inside the range it
+	 * validates, but it steadily converts near-misses into hits, and that consistency is exactly what
+	 * anticheats profile for. Labelled the same as Reach, whose mechanism it complements.
+	 */
+	@Override
+	public Risk getRisk() {
+		return Risk.RISKY;
 	}
 
 	private String formatSize() {

@@ -101,6 +101,9 @@ public final class CriticalsModule extends Module {
 		this.blinkRange.visibleWhen(() -> this.mode.get() == Mode.BLINK);
 		this.timerSpeed.visibleWhen(() -> this.mode.get() == Mode.TIMER);
 		this.timerRange.visibleWhen(() -> this.mode.get() == Mode.TIMER);
+
+		// Leaving Blink or Timer mid-run must drop the state the old mode was tending; see onModeChanged.
+		this.mode.onChange(this::onModeChanged);
 	}
 
 	/** @return the registered module, or {@code null} before registration */
@@ -143,6 +146,24 @@ public final class CriticalsModule extends Module {
 		stopBlinking(MinecraftClient.getInstance());
 		releaseTimer();
 		this.pendingAttack = false;
+	}
+
+	/**
+	 * Drops whatever the outgoing mode was tending.
+	 *
+	 * <p>Switching modes does not run {@link #onDisable()}, so without this a Blink queue built before the
+	 * switch would never be flushed once nothing ticked it —the held packets would stall the connection
+	 * until disconnect —and a Timer slowdown would keep scaling the client clock forever. The cleanup is
+	 * the same one disabling runs, so every way out of a mode behaves identically.</p>
+	 */
+	private void onModeChanged(Mode previous) {
+		if (this.blinking || !this.queued.isEmpty()) {
+			stopBlinking(MinecraftClient.getInstance());
+		}
+
+		releaseTimer();
+		this.pendingAttack = false;
+		this.pendingTicks = 0;
 	}
 
 	// -----------------------------------------------------------------------------------------------------------

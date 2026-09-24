@@ -3,6 +3,7 @@ package com.sakura.client.module.impl;
 import com.sakura.client.module.Category;
 import com.sakura.client.module.Module;
 import com.sakura.client.setting.BooleanSetting;
+import com.sakura.client.setting.ChanceSetting;
 import com.sakura.client.setting.EnumSetting;
 import com.sakura.client.setting.NumberSetting;
 import com.sakura.client.setting.Tagged;
@@ -68,6 +69,9 @@ public final class AutoTotemModule extends Module {
 	private final NumberSetting switchBackDelay = setting(new NumberSetting("Switch Back Delay",
 			"How long the offhand has to stay unneeded before the item comes back.", 40.0, 0.0, 500.0, 10.0,
 			"ms"));
+	private final ChanceSetting chance = setting(new ChanceSetting("Chance",
+			"Chance of reacting on any tick a totem is wanted. Below 100% the swap sometimes waits a few "
+					+ "more ticks, so the reaction stops being instant every single time.", 60.0));
 
 	/** The item the totem displaced, so it can be put back later. */
 	private ItemStack displaced = ItemStack.EMPTY;
@@ -132,6 +136,12 @@ public final class AutoTotemModule extends Module {
 		}
 
 		if (!delayElapsed()) {
+			return;
+		}
+
+		// Rolled per opportunity rather than once per episode, mirroring how Velocity gates its jump: the
+		// swap converges within a few ticks instead of always landing the instant the rule matches.
+		if (!this.chance.roll()) {
 			return;
 		}
 

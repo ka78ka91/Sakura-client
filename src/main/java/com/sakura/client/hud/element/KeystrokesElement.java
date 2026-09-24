@@ -69,7 +69,7 @@ public class KeystrokesElement extends HudModule {
 
 	public KeystrokesElement() {
 		super("Keystrokes", "WASD, space and mouse buttons with live CPS",
-				HudAnchor.BOTTOM_RIGHT, MARGIN, MARGIN, true);
+				HudAnchor.BOTTOM_RIGHT, MARGIN, MARGIN, false);
 	}
 
 	@Override

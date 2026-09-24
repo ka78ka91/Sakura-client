@@ -3,6 +3,7 @@ package com.sakura.client.module.impl;
 import com.sakura.client.module.Category;
 import com.sakura.client.module.Module;
 import com.sakura.client.setting.NumberSetting;
+import com.sakura.client.setting.Risk;
 
 /**
  * Extends the interaction ranges the client uses to decide what is in reach.
@@ -22,7 +23,7 @@ public final class ReachModule extends Module {
 	private static ReachModule instance;
 
 	private final NumberSetting entityReach = setting(new NumberSetting("Entity Reach",
-			"Extra blocks added to the entity interaction range vanilla computed.", 1.0, 0.0, 3.0, 0.1, "blocks"));
+			"Extra blocks added to the entity interaction range vanilla computed.", 0.1, 0.0, 3.0, 0.1, "blocks"));
 	private final NumberSetting blockReach = setting(new NumberSetting("Block Reach",
 			"Extra blocks added to the block interaction range vanilla computed.", 0.0, 0.0, 3.0, 0.1, "blocks"));
 
@@ -38,6 +39,16 @@ public final class ReachModule extends Module {
 		}
 
 		return "+" + String.format(java.util.Locale.ROOT, "%.1f", this.entityReach.get());
+	}
+
+	/**
+	 * The module extends the range the client claims, while the server validates every interaction against
+	 * its own value, so any non-zero extension is a claim the server can catch contradicting. The risk comes
+	 * from the mechanism rather than the magnitude, which is why even the quiet default labels as risky.
+	 */
+	@Override
+	public Risk getRisk() {
+		return Risk.RISKY;
 	}
 
 	/**

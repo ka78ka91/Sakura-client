@@ -99,6 +99,13 @@ public class MultiChoiceSetting<E extends Enum<E>> extends Setting<Set<E>> {
 			}
 		}
 
+		// Not a single stored name matched the current enum, which means the constants were renamed or
+		// pruned since the config was written. Clearing the selection here would silently mute the module,
+		// so the current selection is kept instead; an explicitly empty list still clears as intended.
+		if (restored.isEmpty() && !list.isEmpty()) {
+			return;
+		}
+
 		set(restored);
 	}
 

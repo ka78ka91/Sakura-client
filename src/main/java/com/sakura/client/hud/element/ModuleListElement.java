@@ -62,7 +62,7 @@ public class ModuleListElement extends HudModule {
 
 	public ModuleListElement() {
 		super("Module List", "Right-aligned list of every enabled module",
-				HudAnchor.TOP_RIGHT, MARGIN, MARGIN, true);
+				HudAnchor.TOP_RIGHT, MARGIN, MARGIN, false);
 	}
 
 	@Override

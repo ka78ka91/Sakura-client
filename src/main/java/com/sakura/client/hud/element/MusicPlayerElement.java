@@ -114,7 +114,7 @@ public class MusicPlayerElement extends HudModule {
 
 	public MusicPlayerElement() {
 		super("Music Player", "Now-playing widget with cover art, progress and controls",
-				HudAnchor.TOP_CENTER, 0.0f, 6.0f, true);
+				HudAnchor.TOP_CENTER, 0.0f, 6.0f, false);
 	}
 
 	@Override
@@ -165,9 +165,6 @@ public class MusicPlayerElement extends HudModule {
 
 		if (current != null) {
 			current.tick();
-			handleInput(current);
-		} else {
-			this.hovered = false;
 		}
 	}
 
@@ -305,6 +302,15 @@ public class MusicPlayerElement extends HudModule {
 			this.provider = this.pending;
 			this.pending = null;
 			this.connecting = false;
+		}
+
+		// Input lives here rather than in onTick(): the left-click flag the client exposes is a per-frame
+		// one, so the 20 Hz tick path misses most clicks between two reads. The render path runs every frame
+		// and sees every click; hover tracking rides along and picks up the same upgrade.
+		if (current != null) {
+			handleInput(current);
+		} else {
+			this.hovered = false;
 		}
 
 		this.frameDelta = delta;

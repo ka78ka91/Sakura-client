@@ -1,5 +1,6 @@
 package com.sakura.client.gui.widget;
 
+import com.sakura.client.render.Animations;
 import com.sakura.client.render.RenderUtils;
 import com.sakura.client.render.RenderUtils.Align;
 import net.minecraft.client.gui.Click;
@@ -20,7 +21,8 @@ public class DropdownWidget implements GuiWidget {
 	private static final float LIST_RADIUS = 6.0f;
 	private static final float ARROW_WIDTH = 16.0f;
 	private static final float VALUE_GAP = 8.0f;
-	private static final float ANIMATION_FACTOR = 0.25f;
+	/** E-folds per second, matching the feel of the 0.25-per-frame factor the list used at 60 fps. */
+	private static final float ANIMATION_SPEED = 17.3f;
 	private static final float ANIMATION_EPSILON = 0.01f;
 
 	private static final int LABEL_COLOR = 0xFFFFFFFF;
@@ -36,6 +38,8 @@ public class DropdownWidget implements GuiWidget {
 
 	private final String label;
 	private final String[] options;
+
+	private final Animations.Clock clock = new Animations.Clock();
 
 	private int selected;
 	private boolean expanded;
@@ -94,11 +98,11 @@ public class DropdownWidget implements GuiWidget {
 		this.width = width;
 
 		float target = this.expanded ? 1.0f : 0.0f;
-		this.animation += (target - this.animation) * ANIMATION_FACTOR;
 
-		if (Math.abs(target - this.animation) < ANIMATION_EPSILON) {
-			this.animation = target;
-		}
+		// Exponential approach over the wall-clock delta, so the list opens in the same time on any
+		// refresh rate; a per-frame factor animates four times faster on a 240 Hz screen than on 60 Hz.
+		this.animation = Animations.approach(this.animation, target, ANIMATION_SPEED, this.clock.tick(),
+				ANIMATION_EPSILON);
 
 		RenderUtils.drawTextVCentered(context, this.label, x, y, ROW_HEIGHT, LABEL_COLOR, false, Align.LEFT);
 		RenderUtils.drawTextVCentered(context, getValue(), x + width - ARROW_WIDTH - VALUE_GAP, y, ROW_HEIGHT,
