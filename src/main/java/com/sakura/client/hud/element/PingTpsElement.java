@@ -111,9 +111,9 @@ public final class PingTpsElement extends HudModule {
 
 	/** The latency half of the pill, e.g. {@code Ping 43ms} or {@code Ping --} while unknown. */
 	private String pingText() {
-		int latency = pingOf(MinecraftClient.getInstance());
-
-		return "Ping " + (latency < 0 ? "--" : Math.round(this.shownPing) + "ms");
+		// The displayed value eases toward the sample; the sample itself is read once per frame in render,
+		// and pingPrimed is exactly "the last sample was valid" — so no second lookup is needed here.
+		return "Ping " + (this.pingPrimed ? Math.round(this.shownPing) + "ms" : "--");
 	}
 
 	/** The tick rate half of the pill, e.g. {@code TPS 20.0}. */
@@ -177,10 +177,8 @@ public final class PingTpsElement extends HudModule {
 		}
 
 		if (this.ping.get()) {
-			int latency = pingOf(MinecraftClient.getInstance());
-
 			RenderUtils.drawTextVCentered(context, pingText(), right, y, PANEL_HEIGHT,
-					latency < 0 || !this.pingPrimed ? TEXT_DIM : pingColor(this.shownPing), true, Align.RIGHT);
+					!this.pingPrimed ? TEXT_DIM : pingColor(this.shownPing), true, Align.RIGHT);
 		}
 	}
 

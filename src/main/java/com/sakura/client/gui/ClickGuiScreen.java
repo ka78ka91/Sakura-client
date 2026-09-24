@@ -159,13 +159,67 @@ public class ClickGuiScreen extends Screen {
 		}
 	}
 
-	private record Row(Entry entry, Rect rect) {
+	/**
+	 * Sidebar rows and the other per-frame layout objects are rebuilt every frame, so they are plain mutable
+	 * classes reused from small pools: the rebuild rewrites their fields instead of allocating.
+	 * {@link Rect} stays a record —it is public, its value semantics are part of its contract, and its
+	 * short-lived instances are cheap to begin with.
+	 */
+	private static final class Row {
+		private Entry entry;
+		private Rect rect;
+
+		private Row set(Entry entry, Rect rect) {
+			this.entry = entry;
+			this.rect = rect;
+			return this;
+		}
+
+		private Entry entry() {
+			return this.entry;
+		}
+
+		private Rect rect() {
+			return this.rect;
+		}
 	}
 
-	private record GroupLabel(String text, Rect rect) {
+	private static final class GroupLabel {
+		private String text;
+		private Rect rect;
+
+		private GroupLabel set(String text, Rect rect) {
+			this.text = text;
+			this.rect = rect;
+			return this;
+		}
+
+		private String text() {
+			return this.text;
+		}
+
+		private Rect rect() {
+			return this.rect;
+		}
 	}
 
-	private record Button(Rect rect, Runnable action) {
+	private static final class Button {
+		private Rect rect;
+		private Runnable action;
+
+		private Button set(Rect rect, Runnable action) {
+			this.rect = rect;
+			this.action = action;
+			return this;
+		}
+
+		private Rect rect() {
+			return this.rect;
+		}
+
+		private Runnable action() {
+			return this.action;
+		}
 	}
 
 	private static final Map<Category, String> CATEGORY_ICONS = Map.of(
@@ -184,6 +238,16 @@ public class ClickGuiScreen extends Screen {
 	private final List<GroupLabel> groupLabels = new ArrayList<>();
 	private final List<GuiWidget> activeWidgets = new ArrayList<>();
 	private final List<Button> activeButtons = new ArrayList<>();
+	/**
+	 * Reusable instances for the per-frame layout objects above. A pool only ever grows to the largest
+	 * layout seen; layout() and render() reset the counters before handing instances out again.
+	 */
+	private final List<Row> rowPool = new ArrayList<>();
+	private final List<GroupLabel> groupLabelPool = new ArrayList<>();
+	private final List<Button> buttonPool = new ArrayList<>();
+	private int pooledRows;
+	private int pooledGroupLabels;
+	private int pooledButtons;
 	private final Map<String, Rect> sectionHeaders = new LinkedHashMap<>();
 	private final Map<String, Boolean> collapsedSections = new HashMap<>();
 	private final Map<String, ToggleWidget> toggles = new HashMap<>();
@@ -353,6 +417,12 @@ public class ClickGuiScreen extends Screen {
 	// ------------------------------------------------------------------- layout
 
 	/** Recomputes the window origin, the scale and every sidebar hit box. */
+	/**
+	 * Recomputes the window origin, the scale and every sidebar hit box.
+	 *
+	 * <p>Render is the only caller: the input handlers read these results instead of rebuilding them,
+	 * which used to multiply the whole rebuild on every click, drag frame and scroll.</p>
+	 */
 	private void layout() {
 		float configured = Math.max(MIN_GUI_SCALE, Math.min(MAX_GUI_SCALE, ConfigManager.get().guiScale));
 
@@ -367,6 +437,8 @@ public class ClickGuiScreen extends Screen {
 
 		this.rows.clear();
 		this.groupLabels.clear();
+		this.pooledRows = 0;
+		this.pooledGroupLabels = 0;
 		this.hoveredRow = null;
 
 		float rowX = SIDEBAR_PADDING;
@@ -381,15 +453,40 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private float layoutGroup(String title, List<Entry> entries, float x, float y, float width) {
-		this.groupLabels.add(new GroupLabel(title, new Rect(x + 10.0f, y, width, GROUP_LABEL_HEIGHT)));
+		this.groupLabels.add(takeGroupLabel().set(title, new Rect(x + 10.0f, y, width, GROUP_LABEL_HEIGHT)));
 		float rowY = y + GROUP_LABEL_HEIGHT;
 
 		for (Entry entry : entries) {
-			this.rows.add(new Row(entry, new Rect(x, rowY, width, MENU_ROW_HEIGHT)));
+			this.rows.add(takeRow().set(entry, new Rect(x, rowY, width, MENU_ROW_HEIGHT)));
 			rowY += MENU_ROW_HEIGHT + MENU_ROW_GAP;
 		}
 
 		return rowY;
+	}
+
+	/** @return a pooled row, or a new one when the pool is exhausted */
+	private Row takeRow() {
+		if (this.pooledRows >= this.rowPool.size()) {
+			this.rowPool.add(new Row());
+		}
+
+		return this.rowPool.get(this.pooledRows++);
+	}
+
+	private GroupLabel takeGroupLabel() {
+		if (this.pooledGroupLabels >= this.groupLabelPool.size()) {
+			this.groupLabelPool.add(new GroupLabel());
+		}
+
+		return this.groupLabelPool.get(this.pooledGroupLabels++);
+	}
+
+	private Button takeButton() {
+		if (this.pooledButtons >= this.buttonPool.size()) {
+			this.buttonPool.add(new Button());
+		}
+
+		return this.buttonPool.get(this.pooledButtons++);
 	}
 
 	private float contentX() {
@@ -454,6 +551,8 @@ public class ClickGuiScreen extends Screen {
 		// throw "Can only blur once per frame". The blur and darkening therefore come from vanilla.
 		super.render(context, mouseX, mouseY, delta);
 
+		// The one layout() of the frame: everything below —and the input handlers between frames— reads
+		// the boxes it filled rather than rebuilding them.
 		layout();
 
 		float localMouseX = toLocalX(mouseX);
@@ -463,6 +562,7 @@ public class ClickGuiScreen extends Screen {
 
 		this.activeWidgets.clear();
 		this.activeButtons.clear();
+		this.pooledButtons = 0;
 		this.sectionHeaders.clear();
 		this.moduleRows.clear();
 
@@ -1010,7 +1110,7 @@ public class ClickGuiScreen extends Screen {
 		RenderUtils.drawBorder(context, x, y, width, BUTTON_HEIGHT, 4.0f, 1.0f, WINDOW_BORDER);
 		RenderUtils.drawTextVCentered(context, label, x + width / 2.0f, y, BUTTON_HEIGHT, TEXT, false, Align.CENTER);
 
-		this.activeButtons.add(new Button(new Rect(x, y, width, BUTTON_HEIGHT), action));
+		this.activeButtons.add(takeButton().set(new Rect(x, y, width, BUTTON_HEIGHT), action));
 
 		return x + width;
 	}
@@ -1030,8 +1130,8 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(Click click, boolean doubled) {
-		layout();
-
+		// No layout() here: render fills every hit box each frame, and mouseMoved's hover test already
+		// relies on that, so the input pass can too instead of rebuilding the sidebar per event.
 		double mouseX = toLocalX(click.x());
 		double mouseY = toLocalY(click.y());
 
@@ -1107,8 +1207,6 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean mouseDragged(Click click, double offsetX, double offsetY) {
-		layout();
-
 		Click localClick = new Click(toLocalX(click.x()), toLocalY(click.y()), click.buttonInfo());
 
 		if (this.settingsPanel.mouseDragged(localClick, offsetX / this.scale, offsetY / this.scale)) {
@@ -1126,8 +1224,6 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean mouseReleased(Click click) {
-		layout();
-
 		Click localClick = new Click(toLocalX(click.x()), toLocalY(click.y()), click.buttonInfo());
 		boolean handled = this.settingsPanel.mouseReleased(localClick);
 
@@ -1153,8 +1249,6 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-		layout();
-
 		if (this.settingsPanel.mouseScrolled(toLocalX(mouseX), toLocalY(mouseY), verticalAmount)) {
 			return true;
 		}

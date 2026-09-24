@@ -59,6 +59,10 @@ public class ModuleListElement extends HudModule {
 	private final List<Row> rows = new ArrayList<>();
 	/** Scratch copy of the enabled modules, refilled in place so the render path allocates nothing. */
 	private final List<Module> enabled = new ArrayList<>();
+	/** Measured once per frame in render and read for free by the size queries in between. */
+	private boolean sizeKnown;
+	private float cachedWidth;
+	private float cachedHeight;
 
 	public ModuleListElement() {
 		super("Module List", "Right-aligned list of every enabled module",
@@ -67,41 +71,54 @@ public class ModuleListElement extends HudModule {
 
 	@Override
 	public float getWidth() {
-		syncRows();
-
-		float widest = 0.0f;
-
-		for (Row row : this.rows) {
-			if (isDrawn(row)) {
-				widest = Math.max(widest, rowWidth(row.module));
-			}
-		}
-
-		return widest <= 0.0f ? 0.0f : widest + PADDING_X * 2.0f;
+		ensureMeasured();
+		return this.cachedWidth;
 	}
 
 	@Override
 	public float getHeight() {
-		syncRows();
+		ensureMeasured();
+		return this.cachedHeight;
+	}
 
+	/** Measures from the current rows, syncing first only when nothing has been measured yet. */
+	private void ensureMeasured() {
+		if (this.sizeKnown) {
+			return;
+		}
+
+		syncRows();
+		measure();
+	}
+
+	/** Caches the drawn extent so the per-frame size queries stop re-scanning the rows. */
+	private void measure() {
+		float widest = 0.0f;
 		int drawn = 0;
 
 		for (Row row : this.rows) {
-			if (isDrawn(row)) {
-				drawn++;
+			if (!isDrawn(row)) {
+				continue;
 			}
+
+			widest = Math.max(widest, rowWidth(row.module));
+			drawn++;
 		}
 
-		return drawn == 0 ? 0.0f : drawn * ROW_HEIGHT + (drawn - 1) * ROW_GAP;
+		this.cachedWidth = widest <= 0.0f ? 0.0f : widest + PADDING_X * 2.0f;
+		this.cachedHeight = drawn == 0 ? 0.0f : drawn * ROW_HEIGHT + (drawn - 1) * ROW_GAP;
+		this.sizeKnown = true;
 	}
 
 	@Override
 	public void render(DrawContext context, float x, float y) {
+		// The one syncRows() of the frame happens here; the size queries below read the measurement.
 		syncRows();
 
 		float delta = this.clock.tick();
 
 		advance(delta);
+		measure();
 
 		float width = getWidth();
 

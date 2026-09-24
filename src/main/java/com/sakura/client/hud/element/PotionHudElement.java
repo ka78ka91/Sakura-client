@@ -68,6 +68,10 @@ public final class PotionHudElement extends HudModule {
 	/** Fade state per effect, matched by instance so a row keeps its animation while the list reorders. */
 	private final List<RowFade> fades = new ArrayList<>();
 	private final Animations.Clock clock = new Animations.Clock();
+	/** Measured once per frame in render and read for free by the size queries in between. */
+	private boolean sizeKnown;
+	private float cachedWidth;
+	private float cachedHeight;
 
 	public PotionHudElement() {
 		super("PotionHUD", "Active status effects", HudAnchor.TOP_LEFT, 4.0f, 100.0f, false);
@@ -136,7 +140,28 @@ public final class PotionHudElement extends HudModule {
 
 	@Override
 	public float getWidth() {
+		ensureMeasured();
+		return this.cachedWidth;
+	}
+
+	@Override
+	public float getHeight() {
+		ensureMeasured();
+		return this.cachedHeight;
+	}
+
+	/** Measures from the current effects, refreshing first only when nothing has been measured yet. */
+	private void ensureMeasured() {
+		if (this.sizeKnown) {
+			return;
+		}
+
 		refresh();
+		measure();
+	}
+
+	/** Caches the panel extent so the per-frame size queries stop re-copying the effect list. */
+	private void measure() {
 		float width = MIN_WIDTH;
 
 		for (StatusEffectInstance effect : this.shown) {
@@ -145,30 +170,23 @@ public final class PotionHudElement extends HudModule {
 			width = Math.max(width, row);
 		}
 
-		return width;
-	}
-
-	@Override
-	public float getHeight() {
-		refresh();
-
 		// Rows that are still fading out keep the panel at its size until they are gone.
 		int rows = Math.max(this.shown.size(), fadingRows());
 
-		if (rows == 0) {
-			return ROW_HEIGHT + PADDING * 2.0f;
-		}
-
-		return rows * ROW_HEIGHT + PADDING * 2.0f;
+		this.cachedWidth = width;
+		this.cachedHeight = rows == 0 ? ROW_HEIGHT + PADDING * 2.0f : rows * ROW_HEIGHT + PADDING * 2.0f;
+		this.sizeKnown = true;
 	}
 
 	@Override
 	public void render(DrawContext context, float x, float y) {
+		// The one refresh() of the frame happens here; the size queries below read the measurement.
 		refresh();
 
 		float delta = this.clock.tick();
 
 		advance(delta);
+		measure();
 
 		if (this.shown.isEmpty() && fadingRows() == 0) {
 			return;
