@@ -9,7 +9,7 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 
 /**
- * Capsule switch (36x20) with a smoothly animated knob.
+ * Capsule switch (24x12) with a smoothly animated knob.
  *
  * <p>The knob position is an animation factor rather than a boolean, so the transition is an exponential
  * approach towards the target driven by the frame delta —the same {@code transition: 0.3s} feel of the
@@ -17,11 +17,11 @@ import net.minecraft.client.gui.DrawContext;
  */
 public class ToggleWidget implements GuiWidget {
 
-	private static final float WIDTH = 36.0f;
-	private static final float HEIGHT = 20.0f;
+	private static final float WIDTH = 24.0f;
+	private static final float HEIGHT = 12.0f;
 	private static final float RADIUS = HEIGHT / 2.0f;
-	private static final float KNOB_RADIUS = 7.0f;
-	private static final float KNOB_INSET = 3.0f;
+	private static final float KNOB_RADIUS = 4.0f;
+	private static final float KNOB_INSET = 2.0f;
 	/** E-folds per second, matching the feel of the 0.2-per-frame factor the widget used at 60 fps. */
 	private static final float ANIMATION_SPEED = 13.4f;
 	private static final float ANIMATION_EPSILON = 0.001f;

@@ -20,12 +20,15 @@ import com.sakura.client.notification.NotificationManager;
 import com.sakura.client.render.LocalTransform;
 import com.sakura.client.render.RenderUtils;
 import com.sakura.client.render.RenderUtils.Align;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -58,13 +61,13 @@ public class ClickGuiScreen extends Screen {
 
 	private static final float WINDOW_RADIUS = 12.0f;
 	private static final float SIDEBAR_PADDING = 10.0f;
-	private static final float MENU_ROW_HEIGHT = 22.0f;
-	private static final float MENU_ROW_GAP = 2.0f;
-	private static final float GROUP_LABEL_HEIGHT = 16.0f;
-	private static final float GROUP_GAP = 14.0f;
-	private static final float LOGO_TOP = 18.0f;
-	private static final float LOGO_BLOCK_HEIGHT = 40.0f;
-	private static final float MENU_ICON_COLUMN = 26.0f;
+	private static final float MENU_ROW_HEIGHT = 18.0f;
+	private static final float MENU_ROW_GAP = 1.0f;
+	private static final float GROUP_LABEL_HEIGHT = 13.0f;
+	private static final float GROUP_GAP = 12.0f;
+	private static final float LOGO_TOP = 15.0f;
+	private static final float LOGO_BLOCK_HEIGHT = 34.0f;
+	private static final float MENU_ICON_COLUMN = 22.0f;
 	private static final float USER_CARD_HEIGHT = 46.0f;
 	private static final float CONTENT_PADDING_X = 26.0f;
 	private static final float HEADER_HEIGHT = 78.0f;
@@ -583,7 +586,11 @@ public class ClickGuiScreen extends Screen {
 		context.getMatrices().translate(this.originX, this.originY);
 		context.getMatrices().scale(this.scale, this.scale);
 
-		RenderUtils.drawBlurredRect(context, 0.0f, 0.0f, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_RADIUS, Theme.windowBg());
+		// One flat surface, matching the HUD material: a single translucent fill plus the hairline drawn after
+		// the content. The sheen and inner highlight that used to sit on top belonged to the layered glass
+		// material and are gone with it; the blur behind the window (applied once per frame by vanilla from
+		// Screen.renderBackground) is what keeps the card reading as translucent.
+		RenderUtils.drawRoundedRect(context, 0.0f, 0.0f, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_RADIUS, Theme.windowBg());
 		drawSidebarSurface(context);
 		drawSidebarContents(context);
 		drawContent(context, localMouseX, localMouseY);
@@ -627,7 +634,7 @@ public class ClickGuiScreen extends Screen {
 			int textColor = (isSelected || isHovered) ? Theme.text() : Theme.rowText();
 			int iconColor = isSelected ? accent : Theme.rowIcon();
 
-			RenderUtils.drawTextVCentered(context, row.entry().icon(), rect.x() + 14.0f, rect.y(), rect.height(),
+			RenderUtils.drawTextVCentered(context, row.entry().icon(), rect.x() + 11.0f, rect.y(), rect.height(),
 					iconColor, false, Align.CENTER);
 			RenderUtils.drawTextVCentered(context, row.entry().label(), rect.x() + MENU_ICON_COLUMN, rect.y(),
 					rect.height(), textColor, false, Align.LEFT);
@@ -637,15 +644,15 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private void drawLogo(DrawContext context) {
-		RenderUtils.drawText(context, "\u2726", 18.0f, LOGO_TOP, ConfigManager.get().accentColor, true);
+		RenderUtils.drawText(context, "\u2726", 14.0f, LOGO_TOP, ConfigManager.get().accentColor, true);
 
 		context.getMatrices().pushMatrix();
-		context.getMatrices().translate(34.0f, LOGO_TOP);
+		context.getMatrices().translate(30.0f, LOGO_TOP);
 		context.getMatrices().scale(1.15f, 1.15f);
 		RenderUtils.drawText(context, "Sakura Client", 0.0f, 0.0f, Theme.text(), true);
 		context.getMatrices().popMatrix();
 
-		RenderUtils.drawText(context, "1.21.11", 34.0f, LOGO_TOP + 12.0f, Theme.textDim(), false);
+		RenderUtils.drawText(context, "1.21.11", 30.0f, LOGO_TOP + 12.0f, Theme.textDim(), false);
 	}
 
 	private void drawUserCard(DrawContext context) {
@@ -658,12 +665,11 @@ public class ClickGuiScreen extends Screen {
 		float avatarSize = 30.0f;
 		float avatarX = cardX + 8.0f;
 		float avatarY = cardY + (USER_CARD_HEIGHT - avatarSize) / 2.0f;
-		RenderUtils.drawRoundedRect(context, avatarX, avatarY, avatarSize, avatarSize, 6.0f, USER_AVATAR);
-		RenderUtils.drawTextVCentered(context, "\u263B", avatarX + avatarSize / 2.0f, avatarY, avatarSize,
-				Theme.text(), false, Align.CENTER);
+
+		drawPlayerHead(context, avatarX, avatarY, avatarSize);
 
 		float textX = avatarX + avatarSize + 8.0f;
-		RenderUtils.drawText(context, "Idontkonw", textX, cardY + 9.0f, Theme.text(), false);
+		RenderUtils.drawText(context, playerName(), textX, cardY + 9.0f, Theme.text(), false);
 
 		String tag = "User";
 		float tagWidth = RenderUtils.textWidth(tag) + 10.0f;
@@ -672,6 +678,54 @@ public class ClickGuiScreen extends Screen {
 		RenderUtils.drawRoundedRect(context, textX, tagY, tagWidth, tagHeight, 4.0f, USER_TAG_BG);
 		RenderUtils.drawTextVCentered(context, tag, textX + tagWidth / 2.0f, tagY, tagHeight,
 				USER_TAG_TEXT, false, Align.CENTER);
+	}
+
+	/**
+	 * The signed-in player's name, or a neutral placeholder when the client has no session yet.
+	 *
+	 * <p>The card used to print a hard-coded name, which is wrong for everyone but its author.</p>
+	 */
+	private static String playerName() {
+		MinecraftClient client = MinecraftClient.getInstance();
+
+		if (client == null || client.getSession() == null) {
+			return "Player";
+		}
+
+		String name = client.getSession().getUsername();
+		return name == null || name.isBlank() ? "Player" : name;
+	}
+
+	/**
+	 * Draws the local player's actual head, taken from their skin.
+	 *
+	 * <p>Two quads from the skin sheet: the face, and the hat layer over it. The hat layer is what makes a
+	 * skin's head read correctly — it carries the hair, the headphones, the hood — so a head drawn without it
+	 * looks bald on most skins. Both are packed into the same sheet, at the offsets the vanilla skin layout
+	 * defines, and the region is drawn as a square rather than through the rounded-texture helper because the
+	 * corner rounding costs a scissor per scanline.</p>
+	 *
+	 * <p>Falls back to the icon when no skin is available, so the card always shows something.</p>
+	 */
+	private static void drawPlayerHead(DrawContext context, float x, float y, float size) {
+		MinecraftClient client = MinecraftClient.getInstance();
+		Identifier skin = client == null || client.player == null
+				? null
+				: client.player.getSkin().body().texturePath();
+
+		if (skin == null) {
+			RenderUtils.drawRoundedRect(context, x, y, size, size, 4.0f, USER_AVATAR);
+			RenderUtils.drawTextVCentered(context, "\u263B", x + size / 2.0f, y, size,
+					Theme.text(), false, Align.CENTER);
+			return;
+		}
+
+		int side = Math.round(size);
+		// Face and hat layer, both 8x8 regions of a 64x64 sheet.
+		context.drawTexture(RenderPipelines.GUI_TEXTURED, skin, Math.round(x), Math.round(y),
+				8.0f, 8.0f, side, side, 8, 8, 64, 64);
+		context.drawTexture(RenderPipelines.GUI_TEXTURED, skin, Math.round(x), Math.round(y),
+				40.0f, 8.0f, side, side, 8, 8, 64, 64);
 	}
 
 	private void drawContent(DrawContext context, float mouseX, float mouseY) {
@@ -906,19 +960,20 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	/**
-	 * One module row: name + description, a key bind button and the enable switch. The switch is the
-	 * source of truth for the module's own state, mirrored back into the config on every flip.
+	/**
+	 * One module row: the module's name, a key bind button and the enable switch. The switch is the source of
+	 * truth for the module's own state, mirrored back into the config on every flip.
+	 *
+	 * <p>The row used to carry the module's category under its name whenever descriptions were on. That line sat
+	 * one pixel from the name inside a row only twenty-eight tall, so it read as a doubled label rather than as a
+	 * caption, and the category is already implied by the page the row is on. It is gone; the Descriptions
+	 * setting still governs the Settings page, where a description has room to be one.</p>
 	 */
 	private float moduleRow(DrawContext context, Module module, float x, float y, float width,
 							 float mouseX, float mouseY) {
 		// Recorded so a click on the row —but not on its toggle or key bind —can open the settings panel.
 		this.moduleRows.put(module.getName(), new Rect(x, y, width, MODULE_ROW_HEIGHT));
 		RenderUtils.drawTextVCentered(context, module.getName(), x, y, MODULE_ROW_HEIGHT, Theme.text(), false, Align.LEFT);
-
-		if (ConfigManager.get().descriptions) {
-			String hint = module.getCategory().getDisplayName();
-			RenderUtils.drawTextVCentered(context, hint, x, y + 11.0f, 12.0f, Theme.textFaint(), false, Align.LEFT);
-		}
 
 		ToggleWidget toggle = this.toggles.computeIfAbsent(module.getName(),
 				name -> new ToggleWidget(module.isEnabled()));

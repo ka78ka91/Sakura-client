@@ -20,9 +20,8 @@ import org.lwjgl.glfw.GLFW;
  */
 public class KeybindWidget implements GuiWidget {
 
-	private static final float WIDTH = 64.0f;
-	private static final float HEIGHT = 18.0f;
-	private static final float RADIUS = 4.0f;
+	private static final float WIDTH = 40.0f;
+	private static final float HEIGHT = 12.0f;
 	private int keyCode;
 	private boolean listening;
 
@@ -63,8 +62,8 @@ public class KeybindWidget implements GuiWidget {
 		boolean hovered = contains(mouseX, mouseY);
 		int background = this.listening ? Theme.accentAlpha(0x33) : (hovered ? Theme.buttonBgHover() : Theme.buttonBg());
 
-		RenderUtils.drawRoundedRect(context, x, y, WIDTH, HEIGHT, RADIUS, background);
-		RenderUtils.drawBorder(context, x, y, WIDTH, HEIGHT, RADIUS, 1.0f, Theme.sidebarDivider());
+		RenderUtils.drawRoundedRect(context, x, y, WIDTH, HEIGHT, 3.0f, background);
+		RenderUtils.drawBorder(context, x, y, WIDTH, HEIGHT, 3.0f, 1.0f, Theme.sidebarDivider());
 		RenderUtils.drawTextVCentered(context, getLabel(), x + WIDTH / 2.0f, y, HEIGHT,
 				this.listening ? Theme.text() : Theme.textMuted(), false, Align.CENTER);
 	}

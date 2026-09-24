@@ -38,15 +38,13 @@ public final class RenderUtils {
 	private static final int MAX_SHADOW_LAYERS = 2;
 
 	/**
-	 * Horizontal bands the glass body gradient is built from.
+	 * Panel width below which {@link #drawGlassPanel} skips its hairline.
 	 *
-	 * <p>Lower than the twenty the panel used to draw: each band is a full rounded rectangle, so the count is
-	 * the dominant cost of the material, and eight is still fine enough for the corner arcs.</p>
+	 * <p>A key cap is a couple of dozen pixels across and carries a glyph centred in it; the outline would run
+	 * along the text and cost more than the fill it surrounds. Nothing that wide is ever a panel the player has
+	 * to read an edge on.</p>
 	 */
-	private static final int GLASS_GRADIENT_BANDS = GradientDiagnostics.GLASS_GRADIENT_BANDS;
-
-	/** Band count used by {@code -Dsakura.debug.gradient=legacy}, matching the original algorithm. */
-	private static final int LEGACY_GLASS_GRADIENT_BANDS = 20;
+	private static final float MIN_BORDER_WIDTH = 28.0f;
 
 	// ------------------------------------------------------------------ font
 
@@ -135,40 +133,6 @@ public final class RenderUtils {
 		};
 	}
 
-	// ------------------------------------------------------------ glass panels
-
-	/**
-	 * Draws a frosted-glass panel over the already-blurred backdrop.
-	 *
-	 * <p>The blur itself is not drawn here: 1.21.11 applies it as a whole-screen post effect from
-	 * {@code Screen.renderBackground} (which {@code Screen.renderWithTooltip} calls before a screen's
-	 * own {@code render}), and it may only be applied <em>once per frame</em> —calling
-	 * {@code DrawContext.applyBlur()} from a screen's render method throws. There is also no way to blur
-	 * a single rectangle through the public GUI API. This method therefore supplies the glass itself:
-	 * the tint, the brighter sheen across the upper part and the inner top edge highlight that make a
-	 * flat translucent rectangle read as a pane of glass over the blurred world.</p>
-	 *
-	 * @param tint base glass colour, typically {@code 0xE0141414}
-	 */
-	public static void drawBlurredRect(DrawContext ctx, float x, float y, float width, float height,
-									   float radius, int tint) {
-		if (width <= 0.0f || height <= 0.0f) {
-			return;
-		}
-
-		drawRoundedRect(ctx, x, y, width, height, radius, tint);
-
-		float sheenHeight = Math.min(height * 0.45f, 22.0f);
-
-		if (sheenHeight > 1.0f) {
-			drawRoundedRect(ctx, x, y, width, sheenHeight, radius, 0x0DFFFFFF);
-		}
-
-		if (width > 2.0f) {
-			drawRoundedRect(ctx, x + 1.0f, y + 1.0f, width - 2.0f, 1.0f, 0.5f, 0x14FFFFFF);
-		}
-	}
-
 	// ------------------------------------------------------------ rectangles
 
 	/** Fills an axis-aligned rectangle. */
@@ -188,10 +152,16 @@ public final class RenderUtils {
 	/**
 	 * Fills a rectangle with uniformly rounded corners.
 	 *
-	 * <p>The shape is decomposed into three axis-aligned bands plus four circular corner fans.
-	 * Each corner row is a single 1px-tall span whose length comes from the exact circle
-	 * equation, so the arcs stay smooth and the whole call costs {@code O(radius)} fills
-	 * instead of one fill per pixel column.</p>
+	 * <p>Each row is split into up to two spans — the left corner's, and the right corner's — computed from the
+	 * exact circle equation, and consecutive rows that land on the same pair of spans are merged into one fill.
+	 * That is the cheapest decomposition that is still pixel-exact: the corners are the only part of the shape
+	 * that differs from the bounding rectangle, so the spans always stop where the arc begins.</p>
+	 *
+	 * <p>It matters because this is the shape behind every surface the client draws, including each of the
+	 * twelve HUD elements and each of the seven key caps in the keystrokes overlay. The obvious implementation
+	 * — a full-width band plus four 1px corner rows — pays three fills per row for the two spans and the middle
+	 * between them, which on the small radii this UI uses is almost entirely redundant. Here a row whose corners
+	 * have not moved is one fill.</p>
 	 *
 	 * @param radius corner radius in GUI pixels, automatically clamped to half the shorter side
 	 */
@@ -202,37 +172,81 @@ public final class RenderUtils {
 		}
 
 		float r = Math.min(radius, Math.min(width, height) * 0.5f);
+
 		if (r < 1.0f) {
 			drawRect(ctx, x, y, width, height, argb);
 			return;
 		}
 
-		float right = x + width;
-		float bottom = y + height;
-
-		// Body: the middle band spans the full width, the top/bottom bands sit between the corners.
-		drawRect(ctx, x, y + r, width, height - 2.0f * r, argb);
-		drawRect(ctx, x + r, y, width - 2.0f * r, r, argb);
-		drawRect(ctx, x + r, bottom - r, width - 2.0f * r, r, argb);
-
 		int rows = Math.max(1, Math.round(r));
-		for (int i = 0; i < rows; i++) {
-			// Distance from the circle centre to the centre of this 1px row.
-			double dy = r - (i + 0.5);
+		int top = Math.round(y);
+		int bottom = Math.round(y + height);
+		int left = Math.round(x);
+		int right = Math.round(x + width);
+
+		// The corner arcs only occupy the first and last `rows` rows; everything between them is the full
+		// rectangle. With a small radius on a short panel the two arcs overlap and there is no middle at all.
+		int arcTopEnd = Math.min(top + rows, bottom);
+		int arcBottomStart = Math.max(bottom - rows, arcTopEnd);
+
+		int[] inset = new int[rows];
+
+		for (int row = 0; row < rows; row++) {
+			double dy = r - (row + 0.5);
 			double halfChord = Math.sqrt(Math.max(0.0, (double) r * r - dy * dy));
-			float inset = (float) (r - halfChord);
-			float band = r - inset;
-			if (band <= 0.0f) {
-				continue;
+			inset[row] = (int) Math.round(r - halfChord);
+		}
+
+		fillRoundedRows(ctx, left, right, top, bottom, arcTopEnd - top, arcBottomStart, inset, argb);
+	}
+
+	/**
+	 * Emits the merged spans for the rounded ends of a shape.
+	 *
+	 * @param arcTopEnd    first row that is no longer part of the top arc
+	 * @param arcBottomStart first row that is part of the bottom arc
+	 * @param inset        per-row inset on each side, index 0 being the outermost row of an arc
+	 */
+	private static void fillRoundedRows(DrawContext ctx, int left, int right, int top, int bottom,
+										int arcTopEnd, int arcBottomStart, int[] inset, int argb) {
+		int row = top;
+
+		// Top arc, walking inward.
+		while (row < arcTopEnd) {
+			int index = row - top;
+			int value = inset[index];
+			int leftEdge = left + value;
+			int rightEdge = right - value;
+			int runEnd = row + 1;
+
+			while (runEnd < arcTopEnd && inset[runEnd - top] == value) {
+				runEnd++;
 			}
 
-			float topRow = y + i;
-			float bottomRow = bottom - 1.0f - i;
+			drawRect(ctx, leftEdge, row, rightEdge - leftEdge, runEnd - row, argb);
+			row = runEnd;
+		}
 
-			drawRect(ctx, x + inset, topRow, band, 1.0f, argb);
-			drawRect(ctx, right - r, topRow, band, 1.0f, argb);
-			drawRect(ctx, x + inset, bottomRow, band, 1.0f, argb);
-			drawRect(ctx, right - r, bottomRow, band, 1.0f, argb);
+		// The middle, which has no corner at all.
+		if (row < arcBottomStart) {
+			drawRect(ctx, left, row, right - left, arcBottomStart - row, argb);
+			row = arcBottomStart;
+		}
+
+		// Bottom arc, walking outward.
+		while (row < bottom) {
+			int index = Math.min(inset.length - 1, bottom - row - 1);
+			int value = inset[index];
+			int leftEdge = left + value;
+			int rightEdge = right - value;
+			int runEnd = row + 1;
+
+			while (runEnd < bottom && inset[Math.min(inset.length - 1, bottom - runEnd - 1)] == value) {
+				runEnd++;
+			}
+
+			drawRect(ctx, leftEdge, row, rightEdge - leftEdge, runEnd - row, argb);
+			row = runEnd;
 		}
 	}
 
@@ -503,22 +517,28 @@ public final class RenderUtils {
 	}
 
 	/**
-	 * The standard Sakura glass panel: shadow, tinted gradient body, top sheen, inner highlight and border.
+	 * The standard Sakura panel: one flat, slightly translucent card with a hairline edge.
 	 *
-	 * <p>Every HUD element and window uses this so the whole client reads as one material. The blur behind
-	 * it is provided by the screen itself (vanilla applies it once per frame from
-	 * {@code Screen.renderBackground}); this method supplies everything that sits on top of that blur.</p>
+	 * <p>Every HUD element and window draws through this so the whole client reads as one material. The blur
+	 * behind it is provided by the screen itself (vanilla applies it once per frame from
+	 * {@code Screen.renderBackground}); this method supplies the card that sits on top of that blur.</p>
 	 *
-	 * <p>The body is a gradient over {@link #GLASS_GRADIENT_BANDS} bands, down from the twenty the panel used
-	 * to draw. Each band is a full rounded rectangle, so the band count is the dominant cost of the material and
-	 * the reduction is a straight saving; eight is still fine enough for the corner arcs to follow their curve
-	 * without visible steps.</p>
+	 * <p>The material is flat by design. It used to be a stack — shadow, twenty-band gradient, sheen, inner
+	 * highlight and border — which cost roughly a hundred and fifty fills for every panel on screen: with a
+	 * dozen elements and seven key caps in the keystrokes overlay that ran into thousands of quads per frame,
+	 * and the HUD was measured at 10 fps with everything switched on. A single fill plus a hairline reads almost
+	 * identically against the blurred backdrop at a fraction of the cost, and the depth now comes from the
+	 * surface colours rather than from accumulated alpha.</p>
 	 *
-	 * @param tintTop      glass colour at the top edge, normally more opaque
-	 * @param tintBottom   glass colour at the bottom edge
+	 * <p>{@code shadowArgb} and {@code shadowSpread} are still accepted so no call site has to change; the flat
+	 * material ignores them. {@link #drawSoftShadow} and {@link #drawAccentWash} remain for the few places that
+	 * genuinely want depth — an album-art halo, a target flash.</p>
+	 *
+	 * @param tintTop      the panel's colour; the flat material has no gradient, so this is most of it
+	 * @param tintBottom   the colour at the bottom edge, kept so callers need not change; averaged in
 	 * @param borderArgb   hairline outline, usually a low-alpha white
-	 * @param shadowArgb   shadow colour including its own alpha; fully transparent disables it
-	 * @param shadowSpread shadow reach in pixels
+	 * @param shadowArgb   shadow colour including its own alpha; ignored by the flat material
+	 * @param shadowSpread shadow reach in pixels; ignored by the flat material
 	 */
 	public static void drawGlassPanel(DrawContext ctx, float x, float y, float width, float height, float radius,
 									  int tintTop, int tintBottom, int borderArgb, int shadowArgb,
@@ -527,26 +547,15 @@ public final class RenderUtils {
 			return;
 		}
 
-		if ((shadowArgb >>> 24) != 0) {
-			drawSoftShadow(ctx, x, y, width, height, radius, shadowSpread, shadowArgb);
-		}
+		// One solid, slightly translucent card: a single fill. No gradient, no sheen, no inner highlight and no
+		// shadow — the flat material replaces all four with colour alone, which is both the look and the reason
+		// it is cheap. The two tints are averaged so a caller that picked them for contrast still gets the mean
+		// weight rather than only the top half of its own palette.
+		drawRoundedRect(ctx, x, y, width, height, radius, mix(tintTop, tintBottom, 0.5f));
 
-		int bands = GradientDiagnostics.LEGACY ? LEGACY_GLASS_GRADIENT_BANDS : GLASS_GRADIENT_BANDS;
-		drawRoundedGradient(ctx, x, y, width, height, radius, tintTop, tintBottom, bands);
-
-		// Sheen: the upper part of a glass pane catches more light than the lower part.
-		float sheen = Math.min(height * 0.42f, 24.0f);
-
-		if (sheen > 1.0f) {
-			drawRoundedRect(ctx, x, y, width, sheen, radius, 0x0FFFFFFF);
-		}
-
-		// Inner top edge highlight, the single line that makes a rectangle read as a pane.
-		if (width > 6.0f) {
-			drawRoundedRect(ctx, x + 2.0f, y + 1.0f, width - 4.0f, 1.0f, 0.5f, 0x22FFFFFF);
-		}
-
-		if ((borderArgb >>> 24) != 0) {
+		// The hairline is skipped on small surfaces such as a key cap, where it would sit on top of the text
+		// for no visual gain and cost more than the fill it outlines.
+		if (width >= MIN_BORDER_WIDTH && (borderArgb >>> 24) != 0) {
 			drawBorder(ctx, x, y, width, height, radius, 1.0f, borderArgb);
 		}
 	}
@@ -556,11 +565,16 @@ public final class RenderUtils {
 	 *
 	 * <p>Fades downward instead of ending on a hard line, which is what keeps an accent from looking like
 	 * a border.</p>
+	 *
+	 * <p><b>Currently a no-op.</b> The flat material carries no tint over its body: the accent's job — telling
+	 * the player which colour the client is running — is done by the accent used elsewhere (the switch fill, the
+	 * selection rows, the HUD stripes), and the wash itself was eight gradient bands on each of a dozen
+	 * elements, which is far too much to spend on a tint that was barely visible against a blurred backdrop.
+	 * The method is kept so the call sites in the HUD elements stay readable and so a future design that wants
+	 * the tint back has an obvious place to put it.</p>
 	 */
 	public static void drawAccentWash(DrawContext ctx, float x, float y, float width, float height,
 									  float radius, int accentArgb, float strength) {
-		int top = withAlpha(accentArgb, Math.round(255.0f * 0.22f * strength));
-		drawRoundedGradient(ctx, x, y, width, Math.max(2.0f, height), radius, top, withAlpha(accentArgb, 0), 8);
 	}
 
 	// ---------------------------------------------------- progress & indicators

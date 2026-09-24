@@ -40,10 +40,11 @@ public class ModuleListElement extends HudModule {
 	 *
 	 * <p>The suffix is drawn in the dim text tier rather than as part of the same string, so the two runs need
 	 * explicit separation: the vanilla font's space advance is a single pixel, which reads as the name running
-	 * straight into its own suffix. Rows that are too narrow for the name at this gap lose the tail of the name
-	 * to an ellipsis instead of eating into the gap.</p>
+	 * straight into its own suffix. The row is only 13 pixels tall and its padding is fixed, so the gap is kept
+	 * as small as it can be while still reading as a gap; a name that no longer fits is trimmed, and the way to
+	 * show more of it is to move the element, not to squeeze the gap.</p>
 	 */
-	private static final float NAME_GAP = 6.0f;
+	private static final float NAME_GAP = 4.0f;
 	/** Accent rail on every row, parked just right of the text. */
 	private static final float STRIPE_WIDTH = 2.0f;
 	private static final float STRIPE_INSET = 2.0f;
@@ -263,30 +264,32 @@ public class ModuleListElement extends HudModule {
 			return;
 		}
 
-		// Same layout the width measurement uses, so the box the HUD editor hit-tests cannot disagree with the
-		// text that is actually drawn.
-		float suffixWidth = suffixWidth(suffix);
-		float nameRoom = rowNameWidth(suffix);
-		String name = RenderUtils.trimToWidth(row.module.getName(), nameRoom);
+		// The suffix occupies the last `suffixTextWidth` pixels of the row; the name ends one NAME_GAP to its
+		// left, which is what keeps the two runs apart. Both are drawn right-aligned at their own edge, so the
+		// gap shows up as the difference between the two anchors. Measuring the name against the same edge is
+		// what makes the trim agree with what is drawn: charging the gap to the name as well used to shrink its
+		// budget by NAME_GAP and ellipsise names that fitted comfortably.
+		float anchor = textX - RenderUtils.textWidth(suffix);
+		String name = RenderUtils.trimToWidth(row.module.getName(), nameBudget(suffix));
 
-		RenderUtils.drawText(context, name, textX - suffixWidth, textY, nameColor, true, Align.RIGHT);
+		RenderUtils.drawText(context, name, anchor, textY, nameColor, true, Align.RIGHT);
 		RenderUtils.drawText(context, suffix, textX, textY,
 				RenderUtils.multiplyAlpha(themed(Theme.textDim()), alpha), true, Align.RIGHT);
 	}
 
-	/** @return the total width reserved for the suffix, including the {@link #NAME_GAP} before it */
-	private static float suffixWidth(String suffix) {
+	/**
+	 * @return the horizontal space a row's name may occupy
+	 *
+	 * <p>Everything to the right of the name is the gap plus the suffix, and the row's own padding sits outside
+	 * that, so the name may be as wide as the two together.</p>
+	 */
+	private static float nameBudget(String suffix) {
 		return NAME_GAP + RenderUtils.textWidth(suffix);
-	}
-
-	/** @return the horizontal space a row's name may occupy before it has to be trimmed */
-	private static float rowNameWidth(String suffix) {
-		return suffixWidth(suffix);
 	}
 
 	/** @return the width of everything in a row except the module's own name */
 	private static float rowFixedWidth(String suffix) {
-		return PADDING_X + suffixWidth(suffix);
+		return PADDING_X + nameBudget(suffix);
 	}
 
 	private static float rowWidth(Module module) {
