@@ -2,6 +2,7 @@ package com.sakura.client.module.impl;
 
 import com.sakura.client.module.Category;
 import com.sakura.client.module.Module;
+import com.sakura.client.safety.SafetyManager;
 import com.sakura.client.setting.BooleanSetting;
 import com.sakura.client.setting.ChanceSetting;
 import com.sakura.client.setting.EnumSetting;
@@ -145,6 +146,12 @@ public final class AutoTotemModule extends Module {
 			return;
 		}
 
+		if (!SafetyManager.canAct(getName())) {
+			// The per-second allowance is spent; try again on the next tick. A slot click is the most visible
+			// thing this module does, so it is exactly the kind of action the budget exists to stretch out.
+			return;
+		}
+
 		// Remember what the swap pushes out, but only when it can be put back later.
 		ItemStack offhand = player.getOffHandStack();
 
@@ -155,6 +162,7 @@ public final class AutoTotemModule extends Module {
 			forget();
 		}
 
+		SafetyManager.recordAction(getName());
 		performSwap(client, player, inventory, source);
 	}
 
@@ -192,6 +200,11 @@ public final class AutoTotemModule extends Module {
 			return;
 		}
 
+		if (!SafetyManager.canAct(getName())) {
+			return;
+		}
+
+		SafetyManager.recordAction(getName());
 		performSwap(client, player, inventory, this.displacedSlot);
 		forget();
 		this.unneededSince = -1L;

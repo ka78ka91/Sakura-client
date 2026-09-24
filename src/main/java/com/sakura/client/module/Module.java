@@ -54,7 +54,6 @@ public abstract class Module {
 		toggleListener = listener == null ? module -> {
 		} : listener;
 	}
-
 	// ------------------------------------------------------------------- settings
 
 	/**

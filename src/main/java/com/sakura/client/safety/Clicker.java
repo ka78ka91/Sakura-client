@@ -58,6 +58,22 @@ public final class Clicker {
 		return this.timestamps.size();
 	}
 
+	/**
+	 * @param lowerCps slowest rate the caller will accept
+	 * @param upperCps fastest rate the caller will accept
+	 * @return milliseconds until the next click, drawn from a humanised distribution rather than a uniform one
+	 *
+	 * <p>The two ends are converted to an interval range and handed to
+	 * {@link HumanizedDistribution#millisBetween(double, double)}, so the gaps cluster around an ordinary value
+	 * and occasionally run long instead of being spread flat across the range. That method clamps into the range
+	 * it is given, so the resulting rate can never exceed {@code upperCps} however the draw falls.</p>
+	 */
+	public static long nextIntervalMillis(double lowerCps, double upperCps) {
+		double slowest = 1000.0 / Math.max(1.0, lowerCps);
+		double fastest = 1000.0 / Math.max(1.0, upperCps);
+		return HumanizedDistribution.millisBetween(Math.min(slowest, fastest), Math.max(slowest, fastest));
+	}
+
 	/** @return the gap since the previous click in milliseconds, or {@code -1} when there is no previous click */
 	public long getLastGap(long now) {
 		prune(now);

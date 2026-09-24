@@ -540,21 +540,6 @@ public class ClickGuiScreen extends Screen {
 		return this.originY + localY * this.scale;
 	}
 
-	/** Scale actually applied this frame, which may be below the configured one to fit the screen. */
-	public float getAppliedScale() {
-		return this.scale;
-	}
-
-	/** Whether the applied scale had to be reduced below the configured value to fit. */
-	public boolean isScaleLimited() {
-		return this.scaleLimited;
-	}
-
-	/** Title of the page currently on screen; used by the automated render smoke test. */
-	public String getPageTitle() {
-		return this.searching ? "Search" : this.selected.title();
-	}
-
 	// ------------------------------------------------------------------- render
 
 	@Override

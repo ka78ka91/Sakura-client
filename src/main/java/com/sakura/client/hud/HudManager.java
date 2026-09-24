@@ -56,12 +56,15 @@ public final class HudManager {
 	/**
 	 * Topmost element under the cursor, or {@code null}. Disabled elements are included so the HUD
 	 * editor can position an element before switching it on.
+	 *
+	 * <p>Elements are registered in the order they are painted, so a later one overlaps an earlier one.
+	 * Iterating forwards and keeping the last hit therefore returns the element that is visually on top,
+	 * which is the one the player is pointing at.</p>
 	 */
 	public static HudModule getAt(double mouseX, double mouseY, int screenWidth, int screenHeight) {
 		HudModule found = null;
 
 		for (HudModule element : ELEMENTS) {
-			// Iterate forwards so later (visually higher) elements win.
 			if (element.isHovered(mouseX, mouseY, screenWidth, screenHeight)) {
 				found = element;
 			}

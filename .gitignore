@@ -22,3 +22,7 @@ run/
 .DS_Store
 Thumbs.db
 *.log
+
+# Working notes: the plan document tracks this project's own phases and is kept
+# local on purpose, so it is never part of what the repository publishes.
+PLAN.md

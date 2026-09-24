@@ -3,6 +3,8 @@ package com.sakura.client.rotation;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.MathHelper;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 /**
  * Turns the player toward an angle over several ticks instead of snapping there.
  *
@@ -25,6 +27,30 @@ public final class RotationManager {
 	/** Below this the turn would never finish, so it doubles as a floor on the speed setting. */
 	private static final float MIN_SPEED = 0.05f;
 
+	/**
+	 * Reaction delay before a new target is followed, in milliseconds.
+	 *
+	 * <p>A person does not start moving the instant something enters their crosshair; they notice, and then they
+	 * move. The delay is derived from the configured turn speed so it stays orthogonal to it: a module set to
+	 * snap waits {@link #REACTION_MIN_MILLIS}, and one set to crawl waits {@link #REACTION_MAX_MILLIS}. Adding a
+	 * setting for it would mean every rotating module grew a new parameter, and the speed the player already
+	 * chose is a fair proxy for how mechanical they want the aim to feel.</p>
+	 */
+	private static final long REACTION_MIN_MILLIS = 100L;
+	private static final long REACTION_MAX_MILLIS = 250L;
+	/** Turn speed at or above which the reaction is immediate, and at or below which it is at its longest. */
+	private static final float REACTION_FAST_SPEED = 60.0f;
+	private static final float REACTION_SLOW_SPEED = 5.0f;
+
+	/**
+	 * Ceiling on the small random offset left in the aimed angle, in degrees.
+	 *
+	 * <p>A turn that lands on the same angle to three decimal places every time is a signature in itself: a real
+	 * hand always overshoots or undershoots a little. The offset is drawn fresh whenever it is applied and
+	 * scaled down for a module whose configured speed is already slow enough to look deliberate.</p>
+	 */
+	private static final float MAX_JITTER_DEGREES = 2.0f;
+
 	private static Rotation current;
 	private static Rotation target;
 	private static RotationSettings settings;
@@ -37,6 +63,10 @@ public final class RotationManager {
 	private static int elapsed;
 	private static int ticksForTurn = 1;
 	private static int ticksSinceRequest = Integer.MAX_VALUE;
+	/** Wall-clock moment a new target was taken on, or {@code 0} while no turn is waiting out its reaction. */
+	private static long targetAcquiredAt;
+	/** Whether the reaction delay for the current target has already elapsed. */
+	private static boolean reactionElapsed;
 
 	private static Float savedYaw;
 	private static Float savedPitch;
@@ -68,6 +98,7 @@ public final class RotationManager {
 		if (newTarget) {
 			startRotation = current;
 			elapsed = 0;
+			reactionElapsed = false;
 			startYawDelta = MathHelper.wrapDegrees(wanted.yaw() - current.yaw());
 			startPitchDelta = wanted.pitch() - current.pitch();
 
@@ -92,8 +123,42 @@ public final class RotationManager {
 			return;
 		}
 
+		// The reaction window: ticks spent noticing the target rather than tracking it. `elapsed` doubles as the
+		// counter because it is already reset on every new target, and it is handed back to the ease at zero so
+		// the turn still starts from its beginning.
+		if (!reactionElapsed) {
+			elapsed++;
+
+			if (elapsed * 50L < reactionMillis(settings.speed())) {
+				return;
+			}
+
+			reactionElapsed = true;
+			elapsed = 0;
+		}
+
 		advance();
 		apply(player);
+	}
+
+	/**
+	 * @param speed the module's configured degrees per tick
+	 * @return how long to wait before starting to follow a new target, in milliseconds
+	 */
+	private static long reactionMillis(float speed) {
+		float span = REACTION_FAST_SPEED - REACTION_SLOW_SPEED;
+		float factor = span <= 0.0f ? 0.0f : (REACTION_FAST_SPEED - speed) / span;
+		factor = Math.clamp(factor, 0.0f, 1.0f);
+		return Math.round(REACTION_MIN_MILLIS + (REACTION_MAX_MILLIS - REACTION_MIN_MILLIS) * factor);
+	}
+
+	/**
+	 * @param speed the module's configured degrees per tick
+	 * @return the largest offset this module's aim may carry, in degrees
+	 */
+	private static float jitterDegrees(float speed) {
+		float factor = Math.clamp(speed / REACTION_FAST_SPEED, 0.0f, 1.0f);
+		return MAX_JITTER_DEGREES * factor;
 	}
 
 	private static void advance() {
@@ -127,15 +192,37 @@ public final class RotationManager {
 	}
 
 	private static void apply(PlayerEntity player) {
+		Rotation aimed = jittered();
+
 		if (settings.silent()) {
 			// Held back for the packet swap; the camera stays where the player put it.
-			silentRotation = current;
+			silentRotation = aimed;
 			return;
 		}
 
 		silentRotation = null;
-		player.setYaw(current.yaw());
-		player.setPitch(current.pitch());
+		player.setYaw(aimed.yaw());
+		player.setPitch(aimed.pitch());
+	}
+
+	/**
+	 * @return the current aim with a small fresh offset, which is what keeps the angle from being identical
+	 *         every time the module settles on the same target
+	 *
+	 * <p>Redrawn on every call rather than held for the duration of a turn: a constant offset would just be a
+	 * different constant. The offset is bounded by {@link #jitterDegrees(float)} and the result is clamped to
+	 * legal angles, so it can never point the pitch past straight up or down.</p>
+	 */
+	private static Rotation jittered() {
+		float bound = jitterDegrees(settings.speed());
+
+		if (bound <= 0.0f) {
+			return current;
+		}
+
+		double yawOffset = ThreadLocalRandom.current().nextDouble(-bound, bound);
+		double pitchOffset = ThreadLocalRandom.current().nextDouble(-bound, bound);
+		return new Rotation(current.yaw() + (float) yawOffset, current.pitch() + (float) pitchOffset).clamped();
 	}
 
 	/**
@@ -151,6 +238,8 @@ public final class RotationManager {
 		startRotation = null;
 		silentRotation = null;
 		ticksSinceRequest = Integer.MAX_VALUE;
+		// A fresh episode owes its own reaction; without this the next target would start moving immediately.
+		reactionElapsed = false;
 	}
 
 	/** Called from the mixin at the head of {@code ClientPlayerEntity#sendMovementPackets}. */

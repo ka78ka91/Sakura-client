@@ -4,6 +4,7 @@ import com.sakura.client.mixin.MinecraftClientAccessor;
 import com.sakura.client.module.Category;
 import com.sakura.client.module.Module;
 import com.sakura.client.safety.Clicker;
+import com.sakura.client.safety.SafetyManager;
 import com.sakura.client.setting.BooleanSetting;
 import com.sakura.client.setting.EnumSetting;
 import com.sakura.client.setting.NumberSetting;
@@ -11,8 +12,6 @@ import com.sakura.client.setting.RangeSetting;
 import com.sakura.client.setting.Tagged;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
-
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Clicks for the player at a configurable rate.
@@ -81,6 +80,12 @@ public final class AutoClickerModule extends Module {
 			return;
 		}
 
+		if (!SafetyManager.canAct(getName())) {
+			// The per-second allowance is spent. Waiting a tick costs nothing and keeps a burst from ever
+			// leaving the client; the module is not disabled and its own settings are untouched.
+			return;
+		}
+
 		boolean clicked = false;
 
 		if (this.leftClick.get() && attackCharged(client.player)) {
@@ -94,6 +99,7 @@ public final class AutoClickerModule extends Module {
 		}
 
 		if (clicked) {
+			SafetyManager.recordAction(getName());
 			this.clicker.registerClick(now);
 			this.nextClickAt = now + delay();
 		}
@@ -118,22 +124,13 @@ public final class AutoClickerModule extends Module {
 	/**
 	 * @return milliseconds until the next click
 	 *
-	 * <p>Interim humanisation until the SafetyManager lands its log-normal distribution: the interval rolled
-	 * from the CPS range gets a &plusmn;20% multiplicative jitter plus a small chance of a pause about twice
-	 * as long, so the gaps stop reading as a metronome. The result is clamped to the fastest interval the
-	 * configured range allows, so the jitter can never push the rate past its own ceiling.</p>
+	 * <p>Drawn by {@link Clicker#nextIntervalMillis(double, double)} from the client's log-normal distribution,
+	 * so the gaps cluster around an ordinary interval with an occasional longer pause instead of being spread
+	 * flat across the configured range. That method clamps into the range, so the rate can never exceed the
+	 * fastest value the player configured.</p>
 	 */
 	private long delay() {
-		ThreadLocalRandom random = ThreadLocalRandom.current();
-		long base = 1000L / Math.max(1, this.cps.randomInt());
-		long fastest = 1000L / Math.max(1, (int) Math.round(this.cps.getUpper()));
-		long jittered = (long) (base * random.nextDouble(0.8, 1.2));
-
-		if (random.nextDouble() < 0.05) {
-			jittered *= 2L;
-		}
-
-		return Math.max(fastest, jittered);
+		return Clicker.nextIntervalMillis(this.cps.getLower(), this.cps.getUpper());
 	}
 
 	/** When the clicker is allowed to click. */

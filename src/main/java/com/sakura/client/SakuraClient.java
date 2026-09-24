@@ -36,6 +36,7 @@ import com.sakura.client.render.WorldOverlayRenderer;
 import com.sakura.client.render.WorldProjection;
 import com.sakura.client.rotation.RotationManager;
 import com.sakura.client.safety.FlagDetector;
+import com.sakura.client.safety.SafetyManager;
 import com.sakura.client.setting.Setting;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -198,10 +199,14 @@ public class SakuraClient implements ClientModInitializer {
 
 		NotificationManager.tick();
 		FlagDetector.tick();
-		RotationManager.tick(client.player);
+		SafetyManager.tick();
 		persistModuleSettings();
 		pollModuleKeybinds(client);
+
+		// Modules first, rotation last: a module that aims during its own tick has already placed its request
+		// by the time the manager runs, so the turn it produces belongs to this tick instead of the next one.
 		ModuleManager.tick();
+		RotationManager.tick(client.player);
 	}
 
 	private static void toggleMenu(MinecraftClient client) {

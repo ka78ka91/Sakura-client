@@ -8,6 +8,7 @@ import com.sakura.client.rotation.RotationMode;
 import com.sakura.client.rotation.RotationSettings;
 import com.sakura.client.safety.Clicker;
 import com.sakura.client.safety.FlagDetector;
+import com.sakura.client.safety.SafetyManager;
 import com.sakura.client.setting.BooleanSetting;
 import com.sakura.client.setting.ChanceSetting;
 import com.sakura.client.setting.EnumSetting;
@@ -151,10 +152,17 @@ public final class TriggerBotModule extends Module {
 			return;
 		}
 
+		if (!SafetyManager.canAct(getName())) {
+			// The per-second allowance is spent; the next tick tries again. Nothing is disabled and no setting
+			// changes — the attack is simply deferred.
+			return;
+		}
+
 		((MinecraftClientAccessor) client).sakura$doAttack();
+		SafetyManager.recordAction(getName());
 		this.clicker.registerClick(now);
 		this.clicker.prune(now);
-		this.nextClickAt = now + 1000L / Math.max(1, this.cps.randomInt());
+		this.nextClickAt = now + Clicker.nextIntervalMillis(this.cps.getLower(), this.cps.getUpper());
 	}
 
 	/** @return the living entity under the crosshair and inside the range, or {@code null} */

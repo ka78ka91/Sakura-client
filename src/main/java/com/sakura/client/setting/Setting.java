@@ -91,13 +91,6 @@ public abstract class Setting<T> {
 		globalChangeListener.accept(this);
 	}
 
-	/** Notifies listeners without changing the value, used after loading from disk. */
-	public void onExternalChange() {
-		if (this.changedListener != null) {
-			this.changedListener.accept(this.value);
-		}
-	}
-
 	public Setting<T> onChange(Consumer<T> listener) {
 		this.changedListener = listener;
 		return this;

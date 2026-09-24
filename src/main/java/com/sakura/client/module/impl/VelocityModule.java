@@ -56,7 +56,6 @@ public final class VelocityModule extends Module {
 			"Stop reacting for this many ticks after the server corrects our position.", 0.0, 0.0, 20.0, 1.0,
 			"ticks"));
 
-	private boolean knockbackReceived;
 	private boolean fallDamage;
 	private int limitUntilJump;
 	private int limitTicks;
@@ -89,7 +88,6 @@ public final class VelocityModule extends Module {
 		Vec3d velocity = packet.getVelocity();
 		// A knockback with no horizontal motion and downward Y is fall damage, not a hit.
 		module.fallDamage = velocity.x == 0.0 && velocity.z == 0.0 && velocity.y < 0.0;
-		module.knockbackReceived = true;
 		module.limitTicks = 0;
 	}
 
@@ -163,7 +161,6 @@ public final class VelocityModule extends Module {
 	private void reset() {
 		this.limitUntilJump = 0;
 		this.limitTicks = 0;
-		this.knockbackReceived = false;
 		this.fallDamage = false;
 	}
 
@@ -172,12 +169,6 @@ public final class VelocityModule extends Module {
 		reset();
 	}
 
-	/** @return true when a knockback packet has arrived since the last time this was asked */
-	public boolean consumeKnockback() {
-		boolean received = this.knockbackReceived;
-		this.knockbackReceived = false;
-		return received;
-	}
 
 	public int getLimitTicks() {
 		return this.limitTicks;

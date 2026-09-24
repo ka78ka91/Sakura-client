@@ -136,7 +136,8 @@ public final class RenderUtils {
 	// ------------------------------------------------------------ rectangles
 
 	/** Fills an axis-aligned rectangle. */
-	public static void drawRect(DrawContext ctx, float x, float y, float width, float height, int argb) {		if (width <= 0.0f || height <= 0.0f || (argb >>> 24) == 0) {
+	public static void drawRect(DrawContext ctx, float x, float y, float width, float height, int argb) {
+		if (width <= 0.0f || height <= 0.0f || (argb >>> 24) == 0) {
 			return;
 		}
 		int x1 = Math.round(x);
@@ -786,7 +787,8 @@ public final class RenderUtils {
 		float clipX1 = clipScratch[2];
 		float clipY1 = clipScratch[3];
 
-		float t = Math.max(1.0f, thickness);		float dx = clipX1 - clipX0;
+		float t = Math.max(1.0f, thickness);
+		float dx = clipX1 - clipX0;
 		float dy = clipY1 - clipY0;
 		int steps = (int) Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / t);
 
