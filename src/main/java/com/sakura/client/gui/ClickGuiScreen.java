@@ -1,5 +1,7 @@
 package com.sakura.client.gui;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.SakuraClient;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.config.SakuraConfig;
@@ -46,29 +48,9 @@ import java.util.Map;
 public class ClickGuiScreen extends Screen {
 
 	// ------------------------------------------------------------------ palette
-	private static final int WINDOW_BG = 0xE0141414;
-	private static final int WINDOW_BORDER = 0x1AFFFFFF;
-	private static final int SIDEBAR_BG = 0x800F0F0F;
-	private static final int SIDEBAR_DIVIDER = 0x14FFFFFF;
-	private static final int ROW_SELECTED = 0x20FFFFFF;
-	private static final int ROW_HOVER = 0x15FFFFFF;
-	private static final int ROW_TEXT = 0xFFCCCCCC;
-	private static final int ROW_ICON = 0xB3FFFFFF;
-	private static final int SECTION_BG = 0x33000000;
-	private static final int SECTION_OUTLINE = 0x08FFFFFF;
-	private static final int HEADER_DIVIDER = 0x0DFFFFFF;
-	private static final int TEXT = 0xFFFFFFFF;
-	private static final int TEXT_DIM = 0xFFAAAAAA;
-	private static final int TEXT_FAINT = 0x80FFFFFF;
-	private static final int ACCENT_TEXT = 0xFFA06EFF;
-	private static final int USER_CARD_BG = 0x4D000000;
 	private static final int USER_AVATAR = 0xFFD97D54;
 	private static final int USER_TAG_BG = 0x33FF6B6B;
 	private static final int USER_TAG_TEXT = 0xFFFF6B6B;
-	private static final int BUTTON_BG = 0x1AFFFFFF;
-	private static final int BUTTON_BG_HOVER = 0x26FFFFFF;
-	private static final int SCROLLBAR = 0x33FFFFFF;
-
 	// ----------------------------------------------------------------- geometry
 	public static final int WINDOW_WIDTH = 900;
 	public static final int WINDOW_HEIGHT = 550;
@@ -268,6 +250,7 @@ public class ClickGuiScreen extends Screen {
 	private final SliderWidget guiScaleSlider = new SliderWidget(0.5f);
 	private final DropdownWidget moduleSettingsDropdown =
 			new DropdownWidget("Module settings", "Side panel", "Popup", "Tooltip");
+	private final DropdownWidget themeDropdown = new DropdownWidget("Theme", Theme.labels());
 
 	private Target selected = Target.of(UtilityPage.SETTINGS);
 	private Row hoveredRow;
@@ -316,7 +299,26 @@ public class ClickGuiScreen extends Screen {
 		this.hudRadiusSlider.setFromRange(config.hudCornerRadius, 0.0f, MAX_HUD_RADIUS);
 		this.guiScaleSlider.setFromRange(config.guiScale, MIN_GUI_SCALE, MAX_GUI_SCALE);
 		this.moduleSettingsDropdown.setSelectedIndex(indexOfPanel(config.moduleSettingsPanel));
+		this.themeDropdown.setSelectedIndex(Theme.indexOf(config.theme));
 		this.selected = resolvePage(config.lastGuiPage);
+	}
+
+	/**
+	 * Applies the theme dropdown the moment a new entry is picked instead of waiting for a save, and
+	 * re-seeds the accent picker with the palette's own accent so the two controls never disagree.
+	 */
+	private void syncThemeDropdown() {
+		String picked = this.themeDropdown.getValue();
+		SakuraConfig config = ConfigManager.get();
+
+		if (config.theme.equals(picked)) {
+			return;
+		}
+
+		config.theme = picked;
+		Theme.set(picked);
+		config.accentColor = Theme.accent();
+		this.accentPicker.setColor(Theme.accent());
 	}
 
 	private int indexOfPanel(String panel) {
@@ -364,6 +366,7 @@ public class ClickGuiScreen extends Screen {
 		config.hudCornerRadius = this.hudRadiusSlider.map(0.0f, MAX_HUD_RADIUS);
 		config.guiScale = this.guiScaleSlider.map(MIN_GUI_SCALE, MAX_GUI_SCALE);
 		config.moduleSettingsPanel = this.moduleSettingsDropdown.getValue();
+		config.theme = this.themeDropdown.getValue();
 
 		ConfigManager.save();
 	}
@@ -573,11 +576,11 @@ public class ClickGuiScreen extends Screen {
 		context.getMatrices().translate(this.originX, this.originY);
 		context.getMatrices().scale(this.scale, this.scale);
 
-		RenderUtils.drawBlurredRect(context, 0.0f, 0.0f, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_RADIUS, WINDOW_BG);
+		RenderUtils.drawBlurredRect(context, 0.0f, 0.0f, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_RADIUS, Theme.windowBg());
 		drawSidebarSurface(context);
 		drawSidebarContents(context);
 		drawContent(context, localMouseX, localMouseY);
-		RenderUtils.drawBorder(context, 0.0f, 0.0f, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_RADIUS, 1.0f, WINDOW_BORDER);
+		RenderUtils.drawBorder(context, 0.0f, 0.0f, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_RADIUS, 1.0f, Theme.windowBorder());
 
 		context.getMatrices().popMatrix();
 
@@ -586,19 +589,19 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private void drawSidebarSurface(DrawContext context) {
-		RenderUtils.drawRoundedRect(context, 0.0f, 0.0f, SIDEBAR_WIDTH, WINDOW_HEIGHT, WINDOW_RADIUS, SIDEBAR_BG);
+		RenderUtils.drawRoundedRect(context, 0.0f, 0.0f, SIDEBAR_WIDTH, WINDOW_HEIGHT, WINDOW_RADIUS, Theme.sidebarBg());
 		// Square off the two right corners so the sidebar meets the content edge as a straight line.
-		RenderUtils.drawRect(context, SIDEBAR_WIDTH - WINDOW_RADIUS, 0.0f, WINDOW_RADIUS, WINDOW_RADIUS, SIDEBAR_BG);
+		RenderUtils.drawRect(context, SIDEBAR_WIDTH - WINDOW_RADIUS, 0.0f, WINDOW_RADIUS, WINDOW_RADIUS, Theme.sidebarBg());
 		RenderUtils.drawRect(context, SIDEBAR_WIDTH - WINDOW_RADIUS, WINDOW_HEIGHT - WINDOW_RADIUS,
-				WINDOW_RADIUS, WINDOW_RADIUS, SIDEBAR_BG);
-		RenderUtils.drawRect(context, SIDEBAR_WIDTH - 1.0f, 0.0f, 1.0f, WINDOW_HEIGHT, SIDEBAR_DIVIDER);
+				WINDOW_RADIUS, WINDOW_RADIUS, Theme.sidebarBg());
+		RenderUtils.drawRect(context, SIDEBAR_WIDTH - 1.0f, 0.0f, 1.0f, WINDOW_HEIGHT, Theme.sidebarDivider());
 	}
 
 	private void drawSidebarContents(DrawContext context) {
 		drawLogo(context);
 
 		for (GroupLabel label : this.groupLabels) {
-			RenderUtils.drawText(context, label.text(), label.rect().x(), label.rect().y() + 2.0f, TEXT_DIM, false);
+			RenderUtils.drawText(context, label.text(), label.rect().x(), label.rect().y() + 2.0f, Theme.textDim(), false);
 		}
 
 		int accent = ConfigManager.get().accentColor;
@@ -609,13 +612,13 @@ public class ClickGuiScreen extends Screen {
 			Rect rect = row.rect();
 
 			if (isSelected) {
-				RenderUtils.drawRoundedRect(context, rect.x(), rect.y(), rect.width(), rect.height(), 6.0f, ROW_SELECTED);
+				RenderUtils.drawRoundedRect(context, rect.x(), rect.y(), rect.width(), rect.height(), 6.0f, Theme.rowSelected());
 			} else if (isHovered) {
-				RenderUtils.drawRoundedRect(context, rect.x(), rect.y(), rect.width(), rect.height(), 6.0f, ROW_HOVER);
+				RenderUtils.drawRoundedRect(context, rect.x(), rect.y(), rect.width(), rect.height(), 6.0f, Theme.rowHover());
 			}
 
-			int textColor = (isSelected || isHovered) ? TEXT : ROW_TEXT;
-			int iconColor = isSelected ? accent : ROW_ICON;
+			int textColor = (isSelected || isHovered) ? Theme.text() : Theme.rowText();
+			int iconColor = isSelected ? accent : Theme.rowIcon();
 
 			RenderUtils.drawTextVCentered(context, row.entry().icon(), rect.x() + 14.0f, rect.y(), rect.height(),
 					iconColor, false, Align.CENTER);
@@ -632,10 +635,10 @@ public class ClickGuiScreen extends Screen {
 		context.getMatrices().pushMatrix();
 		context.getMatrices().translate(34.0f, LOGO_TOP);
 		context.getMatrices().scale(1.15f, 1.15f);
-		RenderUtils.drawText(context, "Sakura Client", 0.0f, 0.0f, TEXT, true);
+		RenderUtils.drawText(context, "Sakura Client", 0.0f, 0.0f, Theme.text(), true);
 		context.getMatrices().popMatrix();
 
-		RenderUtils.drawText(context, "1.21.11", 34.0f, LOGO_TOP + 12.0f, TEXT_DIM, false);
+		RenderUtils.drawText(context, "1.21.11", 34.0f, LOGO_TOP + 12.0f, Theme.textDim(), false);
 	}
 
 	private void drawUserCard(DrawContext context) {
@@ -643,17 +646,17 @@ public class ClickGuiScreen extends Screen {
 		float cardWidth = SIDEBAR_WIDTH - 2.0f * SIDEBAR_PADDING;
 		float cardY = WINDOW_HEIGHT - SIDEBAR_PADDING - USER_CARD_HEIGHT;
 
-		RenderUtils.drawRoundedRect(context, cardX, cardY, cardWidth, USER_CARD_HEIGHT, 8.0f, USER_CARD_BG);
+		RenderUtils.drawRoundedRect(context, cardX, cardY, cardWidth, USER_CARD_HEIGHT, 8.0f, Theme.sectionBg());
 
 		float avatarSize = 30.0f;
 		float avatarX = cardX + 8.0f;
 		float avatarY = cardY + (USER_CARD_HEIGHT - avatarSize) / 2.0f;
 		RenderUtils.drawRoundedRect(context, avatarX, avatarY, avatarSize, avatarSize, 6.0f, USER_AVATAR);
 		RenderUtils.drawTextVCentered(context, "\u263B", avatarX + avatarSize / 2.0f, avatarY, avatarSize,
-				TEXT, false, Align.CENTER);
+				Theme.text(), false, Align.CENTER);
 
 		float textX = avatarX + avatarSize + 8.0f;
-		RenderUtils.drawText(context, "Idontkonw", textX, cardY + 9.0f, TEXT, false);
+		RenderUtils.drawText(context, "Idontkonw", textX, cardY + 9.0f, Theme.text(), false);
 
 		String tag = "User";
 		float tagWidth = RenderUtils.textWidth(tag) + 10.0f;
@@ -680,21 +683,21 @@ public class ClickGuiScreen extends Screen {
 		context.getMatrices().pushMatrix();
 		context.getMatrices().translate(contentX + SECTION_TITLE_INSET, titleY);
 		context.getMatrices().scale(1.6f, 1.6f);
-		RenderUtils.drawText(context, title, 0.0f, 0.0f, TEXT, true);
+		RenderUtils.drawText(context, title, 0.0f, 0.0f, Theme.text(), true);
 		context.getMatrices().popMatrix();
 
-		RenderUtils.drawText(context, subtitle, contentX, titleY + 22.0f, TEXT_DIM, false);
+		RenderUtils.drawText(context, subtitle, contentX, titleY + 22.0f, Theme.textDim(), false);
 
 		boolean searchHovered = this.searchButton.contains(mouseX, mouseY);
 		boolean closeHovered = this.closeButton.contains(mouseX, mouseY);
 		RenderUtils.drawTextVCentered(context, "\u2315", this.searchButton.x() + this.searchButton.width() / 2.0f,
 				this.searchButton.y(), this.searchButton.height(),
-				this.searching ? ACCENT_TEXT : (searchHovered ? TEXT : TEXT_DIM), false, Align.CENTER);
+				this.searching ? ConfigManager.get().accentColor : (searchHovered ? Theme.text() : Theme.textDim()), false, Align.CENTER);
 		RenderUtils.drawTextVCentered(context, "\u2715", this.closeButton.x() + this.closeButton.width() / 2.0f,
-				this.closeButton.y(), this.closeButton.height(), closeHovered ? TEXT : TEXT_DIM, false, Align.CENTER);
+				this.closeButton.y(), this.closeButton.height(), closeHovered ? Theme.text() : Theme.textDim(), false, Align.CENTER);
 
 		RenderUtils.drawRect(context, SIDEBAR_WIDTH, HEADER_HEIGHT, WINDOW_WIDTH - SIDEBAR_WIDTH, 1.0f,
-				HEADER_DIVIDER);
+				Theme.headerDivider());
 
 		// Screen-space clip rectangle for the scrolling body.
 		context.enableScissor(
@@ -726,8 +729,8 @@ public class ClickGuiScreen extends Screen {
 		float thumbHeight = Math.max(24.0f, viewport * (viewport / this.contentHeight));
 		float thumbY = bodyTop() + (viewport - thumbHeight) * (this.scroll / maxScroll);
 
-		RenderUtils.drawRoundedRect(context, trackX, bodyTop(), 3.0f, viewport, 1.5f, 0x1AFFFFFF);
-		RenderUtils.drawRoundedRect(context, trackX, thumbY, 3.0f, thumbHeight, 1.5f, SCROLLBAR);
+		RenderUtils.drawRoundedRect(context, trackX, bodyTop(), 3.0f, viewport, 1.5f, Theme.buttonBg());
+		RenderUtils.drawRoundedRect(context, trackX, thumbY, 3.0f, thumbHeight, 1.5f, Theme.scrollbar());
 	}
 
 	/**
@@ -786,6 +789,7 @@ public class ClickGuiScreen extends Screen {
 				+ 8.0f
 				+ ROW_HEIGHT
 				+ ROW_HEIGHT
+				+ this.themeDropdown.getHeight()
 				+ this.moduleSettingsDropdown.getHeight()
 				+ SECTION_PADDING;
 		Rect appearance = drawSection(context, "Appearance", y, width, appearanceBody);
@@ -795,7 +799,7 @@ public class ClickGuiScreen extends Screen {
 			float rowWidth = appearance.width() - SECTION_PADDING * 2.0f;
 			float rowY = appearance.y() + SECTION_HEADER_HEIGHT + SECTION_PADDING;
 
-			RenderUtils.drawText(context, "Accent", rowX, rowY, TEXT, false);
+			RenderUtils.drawText(context, "Accent", rowX, rowY, Theme.text(), false);
 			rowY += 18.0f;
 
 			this.accentPicker.draw(context, rowX, rowY);
@@ -806,6 +810,7 @@ public class ClickGuiScreen extends Screen {
 					rowX, rowY, rowWidth);
 			rowY = sliderRow(context, "HUD corner radius", this.hudRadiusSlider,
 					Math.round(this.hudRadiusSlider.map(0.0f, MAX_HUD_RADIUS)) + " px", rowX, rowY, rowWidth);
+			rowY = dropdownRow(context, this.themeDropdown, rowX, rowY, rowWidth, mouseX, mouseY);
 			dropdownRow(context, this.moduleSettingsDropdown, rowX, rowY, rowWidth, mouseX, mouseY);
 		}
 
@@ -850,7 +855,7 @@ public class ClickGuiScreen extends Screen {
 
 			if (modules.isEmpty()) {
 				RenderUtils.drawTextVCentered(context, "No modules registered in this category yet.",
-						rowX, rowY, MODULE_ROW_HEIGHT, TEXT_FAINT, false, Align.LEFT);
+						rowX, rowY, MODULE_ROW_HEIGHT, Theme.textFaint(), false, Align.LEFT);
 			}
 
 			for (Module module : modules) {
@@ -876,7 +881,7 @@ public class ClickGuiScreen extends Screen {
 
 		if (results.isEmpty()) {
 			RenderUtils.drawTextVCentered(context, "No module matches \"" + this.searchQuery + "\".",
-					rowX, rowY, MODULE_ROW_HEIGHT, TEXT_FAINT, false, Align.LEFT);
+					rowX, rowY, MODULE_ROW_HEIGHT, Theme.textFaint(), false, Align.LEFT);
 		}
 
 		for (Module module : results) {
@@ -895,11 +900,11 @@ public class ClickGuiScreen extends Screen {
 							 float mouseX, float mouseY) {
 		// Recorded so a click on the row —but not on its toggle or key bind —can open the settings panel.
 		this.moduleRows.put(module.getName(), new Rect(x, y, width, MODULE_ROW_HEIGHT));
-		RenderUtils.drawTextVCentered(context, module.getName(), x, y, MODULE_ROW_HEIGHT, TEXT, false, Align.LEFT);
+		RenderUtils.drawTextVCentered(context, module.getName(), x, y, MODULE_ROW_HEIGHT, Theme.text(), false, Align.LEFT);
 
 		if (ConfigManager.get().descriptions) {
 			String hint = module.getCategory().getDisplayName();
-			RenderUtils.drawTextVCentered(context, hint, x, y + 11.0f, 12.0f, TEXT_FAINT, false, Align.LEFT);
+			RenderUtils.drawTextVCentered(context, hint, x, y + 11.0f, 12.0f, Theme.textFaint(), false, Align.LEFT);
 		}
 
 		ToggleWidget toggle = this.toggles.computeIfAbsent(module.getName(),
@@ -944,7 +949,7 @@ public class ClickGuiScreen extends Screen {
 		float rowX = file.x() + SECTION_PADDING;
 		float rowY = file.y() + SECTION_HEADER_HEIGHT + SECTION_PADDING;
 
-		RenderUtils.drawText(context, ConfigManager.getPath().toString(), rowX, rowY, TEXT_DIM, false);
+		RenderUtils.drawText(context, ConfigManager.getPath().toString(), rowX, rowY, Theme.textDim(), false);
 		rowY += 22.0f;
 
 		float next = button(context, "Save", rowX, rowY, 68.0f, mouseX, mouseY, () -> {
@@ -964,7 +969,7 @@ public class ClickGuiScreen extends Screen {
 		float profileY = profilesSection.y() + SECTION_HEADER_HEIGHT + SECTION_PADDING;
 
 		RenderUtils.drawText(context, "Active: " + ConfigManager.getActiveProfile(), profileX, profileY,
-				TEXT_DIM, false);
+				Theme.textDim(), false);
 		profileY += 16.0f;
 
 		for (String profile : profileNames) {
@@ -972,7 +977,7 @@ public class ClickGuiScreen extends Screen {
 					() -> switchToProfile(profile));
 
 			if (profile.equals(ConfigManager.getActiveProfile())) {
-				RenderUtils.drawText(context, "active", nextProfile + 8.0f, profileY + 3.0f, TEXT_FAINT, false);
+				RenderUtils.drawText(context, "active", nextProfile + 8.0f, profileY + 3.0f, Theme.textFaint(), false);
 			}
 
 			profileY += BUTTON_HEIGHT + 6.0f;
@@ -990,14 +995,14 @@ public class ClickGuiScreen extends Screen {
 		float lineY = positions.y() + SECTION_HEADER_HEIGHT + SECTION_PADDING;
 
 		if (elements.isEmpty()) {
-			RenderUtils.drawText(context, "No HUD elements registered.", lineX, lineY, TEXT_FAINT, false);
+			RenderUtils.drawText(context, "No HUD elements registered.", lineX, lineY, Theme.textFaint(), false);
 			lineY += 18.0f;
 		}
 
 		for (HudModule element : elements) {
 			String state = element.isPositioned() ? "custom" : "auto";
-			RenderUtils.drawText(context, element.getName(), lineX, lineY, TEXT, false);
-			RenderUtils.drawText(context, state, lineX + 140.0f, lineY, TEXT_FAINT, false);
+			RenderUtils.drawText(context, element.getName(), lineX, lineY, Theme.text(), false);
+			RenderUtils.drawText(context, state, lineX + 140.0f, lineY, Theme.textFaint(), false);
 			lineY += 18.0f;
 		}
 
@@ -1023,7 +1028,7 @@ public class ClickGuiScreen extends Screen {
 
 		if (elements.isEmpty()) {
 			RenderUtils.drawTextVCentered(context, "No HUD elements registered.",
-					rowX, rowY, MODULE_ROW_HEIGHT, TEXT_FAINT, false, Align.LEFT);
+					rowX, rowY, MODULE_ROW_HEIGHT, Theme.textFaint(), false, Align.LEFT);
 			rowY += MODULE_ROW_HEIGHT;
 		}
 
@@ -1054,11 +1059,11 @@ public class ClickGuiScreen extends Screen {
 		float height = SECTION_HEADER_HEIGHT + (collapsed ? 0.0f : bodyHeight);
 		float x = contentX();
 
-		RenderUtils.drawRoundedRect(context, x, y, width, height, 8.0f, SECTION_BG);
-		RenderUtils.drawBorder(context, x, y, width, height, 8.0f, 1.0f, SECTION_OUTLINE);
-		RenderUtils.drawTextVCentered(context, title, x + 14.0f, y, SECTION_HEADER_HEIGHT, TEXT_DIM, false, Align.LEFT);
+		RenderUtils.drawRoundedRect(context, x, y, width, height, 8.0f, Theme.sectionBg());
+		RenderUtils.drawBorder(context, x, y, width, height, 8.0f, 1.0f, Theme.sectionOutline());
+		RenderUtils.drawTextVCentered(context, title, x + 14.0f, y, SECTION_HEADER_HEIGHT, Theme.textDim(), false, Align.LEFT);
 		RenderUtils.drawTextVCentered(context, collapsed ? "\u203A" : "\u2304", x + width - 22.0f, y,
-				SECTION_HEADER_HEIGHT, TEXT_DIM, false, Align.CENTER);
+				SECTION_HEADER_HEIGHT, Theme.textDim(), false, Align.CENTER);
 
 		this.sectionHeaders.put(title, new Rect(x, y, width, SECTION_HEADER_HEIGHT));
 
@@ -1071,11 +1076,11 @@ public class ClickGuiScreen extends Screen {
 
 	private float toggleRow(DrawContext context, String label, String description, ToggleWidget toggle,
 							float x, float y, float width) {
-		RenderUtils.drawTextVCentered(context, label, x, y, ROW_HEIGHT, TEXT, false, Align.LEFT);
+		RenderUtils.drawTextVCentered(context, label, x, y, ROW_HEIGHT, Theme.text(), false, Align.LEFT);
 
 		if (ConfigManager.get().descriptions && description != null) {
 			RenderUtils.drawTextVCentered(context, description,
-					x + width - ToggleWidget.widgetWidth() - 10.0f, y, ROW_HEIGHT, TEXT_FAINT, false, Align.RIGHT);
+					x + width - ToggleWidget.widgetWidth() - 10.0f, y, ROW_HEIGHT, Theme.textFaint(), false, Align.RIGHT);
 		}
 
 		toggle.draw(context, x + width - ToggleWidget.widgetWidth(),
@@ -1106,9 +1111,9 @@ public class ClickGuiScreen extends Screen {
 		boolean hovered = mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + BUTTON_HEIGHT;
 
 		RenderUtils.drawRoundedRect(context, x, y, width, BUTTON_HEIGHT, 4.0f,
-				hovered ? BUTTON_BG_HOVER : BUTTON_BG);
-		RenderUtils.drawBorder(context, x, y, width, BUTTON_HEIGHT, 4.0f, 1.0f, WINDOW_BORDER);
-		RenderUtils.drawTextVCentered(context, label, x + width / 2.0f, y, BUTTON_HEIGHT, TEXT, false, Align.CENTER);
+				hovered ? Theme.buttonBgHover() : Theme.buttonBg());
+		RenderUtils.drawBorder(context, x, y, width, BUTTON_HEIGHT, 4.0f, 1.0f, Theme.windowBorder());
+		RenderUtils.drawTextVCentered(context, label, x + width / 2.0f, y, BUTTON_HEIGHT, Theme.text(), false, Align.CENTER);
 
 		this.activeButtons.add(takeButton().set(new Rect(x, y, width, BUTTON_HEIGHT), action));
 
@@ -1183,6 +1188,8 @@ public class ClickGuiScreen extends Screen {
 		// click —passing the raw screen-space one silently misses whenever the window is scaled.
 		for (GuiWidget widget : this.activeWidgets) {
 			if (widget.mouseClicked(localClick)) {
+				// The theme dropdown takes effect on pick, not on save.
+				syncThemeDropdown();
 				return true;
 			}
 		}

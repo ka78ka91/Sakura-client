@@ -32,6 +32,10 @@ public class SakuraConfig {
 	public String moduleSettingsPanel = "Side panel";
 	/** Sidebar page the menu reopens on: a {@code Category} or {@code ClickGuiScreen.UtilityPage} enum name. */
 	public String lastGuiPage = "Settings";
+	/** One of {@code Theme}'s palette labels; drives every themed surface in the client. */
+	public String theme = "Sakura";
+	/** Reserved for the custom font loader; inert until a verified 1.21.11 registration path exists. */
+	public boolean customFont = false;
 
 	// -------------------------------------------------------------------- modules
 	public Map<String, Boolean> moduleStates = new HashMap<>();

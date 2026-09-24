@@ -1,5 +1,7 @@
 package com.sakura.client.gui.widget;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.render.RenderUtils;
 import com.sakura.client.render.RenderUtils.Align;
 import net.minecraft.client.gui.Click;
@@ -21,13 +23,6 @@ public class SliderWidget implements GuiWidget {
 	private static final float LABEL_GAP = 10.0f;
 	private static final float MIN_TRACK_WIDTH = 60.0f;
 	private static final float DEFAULT_TRACK_WIDTH = 160.0f;
-
-	private static final int TRACK_BG = 0x1AFFFFFF;
-	private static final int TRACK_FILL = 0xFFFFFFFF;
-	private static final int KNOB = 0xFFFFFFFF;
-	private static final int LABEL_COLOR = 0xFFFFFFFF;
-	private static final int VALUE_COLOR = 0xFFAAAAAA;
-
 	private float value;
 	private boolean dragging;
 
@@ -84,26 +79,26 @@ public class SliderWidget implements GuiWidget {
 		this.trackY = y + (ROW_HEIGHT - TRACK_HEIGHT) / 2.0f + 1.0f;
 
 		if (label != null) {
-			RenderUtils.drawTextVCentered(context, label, x, y, ROW_HEIGHT, LABEL_COLOR, false, Align.LEFT);
+			RenderUtils.drawTextVCentered(context, label, x, y, ROW_HEIGHT, Theme.text(), false, Align.LEFT);
 		}
 
 		if (valueText != null) {
-			RenderUtils.drawTextVCentered(context, valueText, x + width, y, ROW_HEIGHT, VALUE_COLOR, false, Align.RIGHT);
+			RenderUtils.drawTextVCentered(context, valueText, x + width, y, ROW_HEIGHT, Theme.textDim(), false, Align.RIGHT);
 		}
 
 		RenderUtils.drawRoundedRect(context, this.trackX, this.trackY, this.trackWidth, TRACK_HEIGHT,
-				TRACK_RADIUS, TRACK_BG);
+				TRACK_RADIUS, Theme.buttonBg());
 
 		float filled = this.trackWidth * this.value;
 		if (filled > 0.0f) {
 			RenderUtils.drawRoundedRect(context, this.trackX, this.trackY, filled, TRACK_HEIGHT,
-					TRACK_RADIUS, TRACK_FILL);
+					TRACK_RADIUS, Theme.text());
 		}
 
 		float knobCenterX = this.trackX + filled;
 		float knobCenterY = this.trackY + TRACK_HEIGHT / 2.0f;
 		RenderUtils.drawRoundedRect(context, knobCenterX - KNOB_RADIUS, knobCenterY - KNOB_RADIUS,
-				KNOB_RADIUS * 2.0f, KNOB_RADIUS * 2.0f, KNOB_RADIUS, KNOB);
+				KNOB_RADIUS * 2.0f, KNOB_RADIUS * 2.0f, KNOB_RADIUS, Theme.text());
 	}
 
 	// -------------------------------------------------------------------- input

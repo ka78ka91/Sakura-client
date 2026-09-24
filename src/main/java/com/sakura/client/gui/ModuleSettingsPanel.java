@@ -1,5 +1,8 @@
 package com.sakura.client.gui;
 
+
+import com.sakura.client.config.ConfigManager;
+import com.sakura.client.render.Theme;
 import com.sakura.client.gui.ClickGuiScreen.Rect;
 import com.sakura.client.gui.widget.ColorPickerWidget;
 import com.sakura.client.gui.widget.DropdownWidget;
@@ -37,19 +40,6 @@ import java.util.Map;
 public final class ModuleSettingsPanel {
 
 	// ------------------------------------------------------------------ palette
-	private static final int PANEL_BG = 0xF01A1A1A;
-	private static final int PANEL_BORDER = 0x24FFFFFF;
-	private static final int HEADER_BG = 0x2AFFFFFF;
-	private static final int DIVIDER = 0x14FFFFFF;
-	private static final int TEXT = 0xFFFFFFFF;
-	private static final int TEXT_DIM = 0xFFAAAAAA;
-	private static final int TEXT_FAINT = 0x80FFFFFF;
-	private static final int ACCENT = 0xFFA06EFF;
-	private static final int CHIP_BG = 0x1AFFFFFF;
-	private static final int CHIP_BG_ON = 0x40A06EFF;
-	private static final int BUTTON_BG = 0x1AFFFFFF;
-	private static final int BUTTON_BG_HOVER = 0x2EFFFFFF;
-
 	private static final int RISK_SAFE = 0xFF62C46A;
 	private static final int RISK_RISKY = 0xFFE0A44A;
 	private static final int RISK_OUTDATED = 0xFFE05A5A;
@@ -193,8 +183,8 @@ public final class ModuleSettingsPanel {
 			return;
 		}
 
-		RenderUtils.drawRoundedRect(context, this.x, this.y, WIDTH, this.height, 10.0f, PANEL_BG);
-		RenderUtils.drawBorder(context, this.x, this.y, WIDTH, this.height, 10.0f, 1.0f, PANEL_BORDER);
+		RenderUtils.drawRoundedRect(context, this.x, this.y, WIDTH, this.height, 10.0f, Theme.panelBg());
+		RenderUtils.drawBorder(context, this.x, this.y, WIDTH, this.height, 10.0f, 1.0f, Theme.panelBorder());
 
 		drawHeader(context, mouseX, mouseY);
 
@@ -219,7 +209,7 @@ public final class ModuleSettingsPanel {
 
 		if (this.module.getVisibleSettings().isEmpty()) {
 			RenderUtils.drawTextVCentered(context, "No parameters for this module yet.",
-					this.x + PADDING, this.contentTop + 6.0f, 16.0f, TEXT_FAINT, false, Align.LEFT);
+					this.x + PADDING, this.contentTop + 6.0f, 16.0f, Theme.textFaint(), false, Align.LEFT);
 		}
 
 		drawResetButton(context, mouseX, mouseY);
@@ -231,9 +221,9 @@ public final class ModuleSettingsPanel {
 
 	private void drawHeader(DrawContext context, float mouseX, float mouseY) {
 		RenderUtils.drawRoundedRect(context, this.x + 1.0f, this.y + 1.0f, WIDTH - 2.0f, HEADER_HEIGHT - 1.0f,
-				9.0f, HEADER_BG);
+				9.0f, Theme.headerBg());
 		RenderUtils.drawTextVCentered(context, this.module.getName(), this.x + PADDING, this.y + 6.0f, 16.0f,
-				TEXT, false, Align.LEFT);
+				Theme.text(), false, Align.LEFT);
 
 		Risk risk = this.module.getRisk();
 
@@ -245,12 +235,12 @@ public final class ModuleSettingsPanel {
 		RenderUtils.drawTextVCentered(context,
 				this.module.getCategory().getDisplayName() + "  -  "
 						+ this.module.getVisibleSettings().size() + " parameters",
-				this.x + PADDING, this.y + 22.0f, 12.0f, TEXT_DIM, false, Align.LEFT);
+				this.x + PADDING, this.y + 22.0f, 12.0f, Theme.textDim(), false, Align.LEFT);
 
 		boolean hovered = this.closeButton.contains(mouseX, mouseY);
 		RenderUtils.drawTextVCentered(context, "\u2715", this.closeButton.x() + this.closeButton.width() / 2.0f,
-				this.closeButton.y(), this.closeButton.height(), hovered ? TEXT : TEXT_DIM, false, Align.CENTER);
-		RenderUtils.drawRect(context, this.x + 1.0f, this.y + HEADER_HEIGHT, WIDTH - 2.0f, 1.0f, DIVIDER);
+				this.closeButton.y(), this.closeButton.height(), hovered ? Theme.text() : Theme.textDim(), false, Align.CENTER);
+		RenderUtils.drawRect(context, this.x + 1.0f, this.y + HEADER_HEIGHT, WIDTH - 2.0f, 1.0f, Theme.headerDivider());
 	}
 
 	private void renderRow(DrawContext context, Setting<?> setting, float rowY, float mouseX, float mouseY) {
@@ -260,7 +250,7 @@ public final class ModuleSettingsPanel {
 				ToggleWidget toggle = toggle(booleanSetting);
 				toggle.setOn(booleanSetting.get());
 				RenderUtils.drawTextVCentered(context, setting.getName(), this.x + PADDING, rowY, 20.0f,
-						TEXT, false, Align.LEFT);
+						Theme.text(), false, Align.LEFT);
 				toggle.draw(context, this.x + WIDTH - PADDING - ToggleWidget.widgetWidth(),
 						rowY + (20.0f - ToggleWidget.widgetHeight()) / 2.0f);
 			}
@@ -316,7 +306,7 @@ public final class ModuleSettingsPanel {
 
 	private void renderMultiChoice(DrawContext context, MultiChoiceSetting<?> setting, float rowY) {
 		RenderUtils.drawTextVCentered(context, setting.getName(), this.x + PADDING, rowY, LABEL_LINE,
-				TEXT, false, Align.LEFT);
+				Theme.text(), false, Align.LEFT);
 
 		float chipY = rowY + LABEL_LINE;
 		float innerWidth = WIDTH - 2.0f * PADDING;
@@ -334,9 +324,9 @@ public final class ModuleSettingsPanel {
 			this.chips.add(new Chip(setting, choice, rect));
 
 			RenderUtils.drawRoundedRect(context, chipX, y, chipWidth, CHIP_HEIGHT, 4.0f,
-					selected ? CHIP_BG_ON : CHIP_BG);
+					selected ? Theme.accentAlpha(0x40) : Theme.chipBg());
 			RenderUtils.drawTextVCentered(context, labelOfChoice(setting, choice),
-					chipX + chipWidth / 2.0f, y, CHIP_HEIGHT, selected ? TEXT : TEXT_DIM, false, Align.CENTER);
+					chipX + chipWidth / 2.0f, y, CHIP_HEIGHT, selected ? Theme.text() : Theme.textDim(), false, Align.CENTER);
 			index++;
 		}
 	}
@@ -344,7 +334,7 @@ public final class ModuleSettingsPanel {
 	private void renderColor(DrawContext context, Setting<?> rawSetting, float rowY, float mouseX, float mouseY) {
 		ColorSetting setting = asColor(rawSetting);
 		RenderUtils.drawTextVCentered(context, setting.getName(), this.x + PADDING, rowY, 20.0f,
-				TEXT, false, Align.LEFT);
+				Theme.text(), false, Align.LEFT);
 
 		float swatchWidth = 70.0f;
 		float swatchX = this.x + WIDTH - PADDING - swatchWidth;
@@ -354,9 +344,9 @@ public final class ModuleSettingsPanel {
 
 		RenderUtils.drawRoundedRect(context, swatchX, rowY + 2.0f, swatchWidth, 16.0f, 4.0f, setting.get());
 		RenderUtils.drawBorder(context, swatchX, rowY + 2.0f, swatchWidth, 16.0f, 4.0f, 1.0f,
-				hovered || expanded ? 0x66FFFFFF : 0x33FFFFFF);
+				hovered || expanded ? Theme.buttonBgHover() : Theme.buttonBg());
 		RenderUtils.drawTextVCentered(context, setting.getHex(), swatchX + swatchWidth - 4.0f, rowY + 2.0f, 16.0f,
-				0xFFFFFFFF, false, Align.RIGHT);
+				Theme.text(), false, Align.RIGHT);
 
 		if (expanded) {
 			ColorPickerWidget picker = picker(setting);
@@ -386,10 +376,10 @@ public final class ModuleSettingsPanel {
 		boolean hovered = this.resetButton.contains(mouseX, mouseY);
 		RenderUtils.drawRoundedRect(context, this.resetButton.x(), this.resetButton.y(),
 				this.resetButton.width(), this.resetButton.height(), 5.0f,
-				hovered ? BUTTON_BG_HOVER : BUTTON_BG);
+				hovered ? Theme.buttonBgHover() : Theme.buttonBg());
 		RenderUtils.drawTextVCentered(context, "\u21BA  Restore defaults",
 				this.resetButton.x() + this.resetButton.width() / 2.0f, this.resetButton.y(),
-				this.resetButton.height(), hovered ? TEXT : TEXT_DIM, false, Align.CENTER);
+				this.resetButton.height(), hovered ? Theme.text() : Theme.textDim(), false, Align.CENTER);
 	}
 
 	private void drawScrollbar(DrawContext context) {
@@ -404,8 +394,8 @@ public final class ModuleSettingsPanel {
 		float thumbHeight = Math.max(20.0f, viewport * (viewport / this.contentHeight));
 		float thumbY = this.contentTop + (viewport - thumbHeight) * (this.scroll / maxScroll);
 
-		RenderUtils.drawRoundedRect(context, trackX, this.contentTop, 2.5f, viewport, 1.25f, 0x1AFFFFFF);
-		RenderUtils.drawRoundedRect(context, trackX, thumbY, 2.5f, thumbHeight, 1.25f, 0x33FFFFFF);
+		RenderUtils.drawRoundedRect(context, trackX, this.contentTop, 2.5f, viewport, 1.25f, Theme.buttonBg());
+		RenderUtils.drawRoundedRect(context, trackX, thumbY, 2.5f, thumbHeight, 1.25f, Theme.scrollbar());
 	}
 
 	// --------------------------------------------------------------------- input

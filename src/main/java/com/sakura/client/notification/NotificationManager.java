@@ -1,5 +1,8 @@
 package com.sakura.client.notification;
 
+
+import com.sakura.client.config.ConfigManager;
+import com.sakura.client.render.Theme;
 import com.sakura.client.module.Module;
 import com.sakura.client.render.RenderUtils;
 import com.sakura.client.render.RenderUtils.Align;
@@ -26,14 +29,6 @@ public final class NotificationManager {
 	private static final float WIDTH = 132.0f;
 	private static final float HEIGHT = 26.0f;
 	private static final float GAP = 4.0f;
-
-	private static final int BG = 0xE6141414;
-	private static final int BORDER = 0x1AFFFFFF;
-	private static final int TEXT = 0xFFFFFFFF;
-	private static final int TEXT_DIM = 0xFFAAAAAA;
-	private static final int ENABLED = 0xFFA06EFF;
-	private static final int DISABLED = 0xFF808080;
-
 	private NotificationManager() {
 	}
 
@@ -107,14 +102,14 @@ public final class NotificationManager {
 			float x = -WIDTH;
 			float y = index * (HEIGHT + GAP);
 
-			RenderUtils.drawRoundedRect(context, x, y, WIDTH, HEIGHT, 5.0f, applyAlpha(BG, alpha));
-			RenderUtils.drawBorder(context, x, y, WIDTH, HEIGHT, 5.0f, 1.0f, applyAlpha(BORDER, alpha));
+			RenderUtils.drawRoundedRect(context, x, y, WIDTH, HEIGHT, 5.0f, applyAlpha(Theme.panelBg(), alpha));
+			RenderUtils.drawBorder(context, x, y, WIDTH, HEIGHT, 5.0f, 1.0f, applyAlpha(Theme.panelBorder(), alpha));
 			RenderUtils.drawTextVCentered(context, notice.title(), x + 9.0f, y + 2.0f, 13.0f,
-					applyAlpha(TEXT, alpha), false, Align.LEFT);
+					applyAlpha(Theme.text(), alpha), false, Align.LEFT);
 			RenderUtils.drawTextVCentered(context, notice.subtitle(), x + 9.0f, y + 13.0f, 11.0f,
-					applyAlpha(notice.positive() ? ENABLED : TEXT_DIM, alpha), false, Align.LEFT);
+					applyAlpha(notice.positive() ? ConfigManager.get().accentColor : Theme.textDim(), alpha), false, Align.LEFT);
 			RenderUtils.drawRoundedRect(context, x + 3.0f, y + 5.0f, 2.0f, HEIGHT - 10.0f, 1.0f,
-					applyAlpha(notice.positive() ? ENABLED : DISABLED, alpha));
+					applyAlpha(notice.positive() ? ConfigManager.get().accentColor : Theme.textDim(), alpha));
 		}
 
 		context.getMatrices().popMatrix();

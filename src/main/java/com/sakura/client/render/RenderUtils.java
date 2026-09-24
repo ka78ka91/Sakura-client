@@ -31,9 +31,9 @@ public final class RenderUtils {
 
 	// ------------------------------------------------------------------ font
 
-	/** The client's main {@link TextRenderer}. */
+	/** The client's main {@link TextRenderer}, through {@link FontManager}. */
 	public static TextRenderer font() {
-		return MinecraftClient.getInstance().textRenderer;
+		return FontManager.font();
 	}
 
 	/** Rendered width of {@code text} in GUI pixels. */

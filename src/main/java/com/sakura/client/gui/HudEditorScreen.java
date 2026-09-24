@@ -1,5 +1,7 @@
 package com.sakura.client.gui;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.hud.HudManager;
 import com.sakura.client.hud.HudModule;
 import com.sakura.client.render.RenderUtils;
@@ -21,14 +23,6 @@ public class HudEditorScreen extends Screen {
 
 	private static final float HINT_HEIGHT = 24.0f;
 	private static final float GRID_SPACING = 20.0f;
-
-	private static final int HINT_BG = 0x99000000;
-	private static final int OUTLINE = 0xCCA06EFF;
-	private static final int OUTLINE_DISABLED = 0x66FFFFFF;
-	private static final int GRID = 0x14FFFFFF;
-	private static final int TEXT = 0xFFFFFFFF;
-	private static final int TEXT_DIM = 0xFFAAAAAA;
-
 	private HudModule dragging;
 	private float grabOffsetX;
 	private float grabOffsetY;
@@ -63,8 +57,8 @@ public class HudEditorScreen extends Screen {
 			float y = highlighted.resolveY(screenHeight);
 
 			RenderUtils.drawBorder(context, x, y, highlighted.getWidth(), highlighted.getHeight(), 3.0f, 1.0f,
-					highlighted.isEnabled() ? OUTLINE : OUTLINE_DISABLED);
-			RenderUtils.drawText(context, highlighted.getName(), x, y - 11.0f, TEXT, true);
+					highlighted.isEnabled() ? Theme.accentAlpha(0xCC) : Theme.textFaint());
+			RenderUtils.drawText(context, highlighted.getName(), x, y - 11.0f, Theme.text(), true);
 		}
 
 		drawHint(context, screenWidth, screenHeight);
@@ -72,11 +66,11 @@ public class HudEditorScreen extends Screen {
 
 	private static void drawGrid(DrawContext context, int screenWidth, int screenHeight) {
 		for (float x = 0.0f; x < screenWidth; x += GRID_SPACING) {
-			RenderUtils.drawRect(context, x, 0.0f, 1.0f, screenHeight, GRID);
+			RenderUtils.drawRect(context, x, 0.0f, 1.0f, screenHeight, Theme.sidebarDivider());
 		}
 
 		for (float y = 0.0f; y < screenHeight; y += GRID_SPACING) {
-			RenderUtils.drawRect(context, 0.0f, y, screenWidth, 1.0f, GRID);
+			RenderUtils.drawRect(context, 0.0f, y, screenWidth, 1.0f, Theme.sidebarDivider());
 		}
 	}
 
@@ -86,8 +80,8 @@ public class HudEditorScreen extends Screen {
 		float x = (screenWidth - width) / 2.0f;
 		float y = screenHeight - HINT_HEIGHT - 8.0f;
 
-		RenderUtils.drawRoundedRect(context, x, y, width, HINT_HEIGHT, 6.0f, HINT_BG);
-		RenderUtils.drawTextVCentered(context, line, x + width / 2.0f, y, HINT_HEIGHT, TEXT_DIM, false, Align.CENTER);
+		RenderUtils.drawRoundedRect(context, x, y, width, HINT_HEIGHT, 6.0f, Theme.sectionBg());
+		RenderUtils.drawTextVCentered(context, line, x + width / 2.0f, y, HINT_HEIGHT, Theme.textDim(), false, Align.CENTER);
 	}
 
 	// -------------------------------------------------------------------- input

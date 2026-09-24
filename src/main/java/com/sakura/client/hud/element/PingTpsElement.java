@@ -1,5 +1,7 @@
 package com.sakura.client.hud.element;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.hud.HudAnchor;
 import com.sakura.client.hud.HudModule;
@@ -41,9 +43,6 @@ public final class PingTpsElement extends HudModule {
 	private static final float DIVIDER_HEIGHT = 8.0f;
 	/** How quickly the displayed numbers catch up with their sources, in e-folds per second. */
 	private static final float VALUE_SPEED = 5.0f;
-
-	private static final int TEXT_DIM = 0xFF9A9AA2;
-	private static final int DIVIDER = 0x33FFFFFF;
 	private static final int PING_GOOD = 0xFF6BE89A;
 	private static final int PING_MID = 0xFFFFC04D;
 	private static final int PING_BAD = 0xFFFF5A5A;
@@ -59,10 +58,6 @@ public final class PingTpsElement extends HudModule {
 	/** Width of the tick-rate scale, from a healthy twenty down to a timing-out ten. */
 	private static final float TPS_SPAN = TPS_BEST - TPS_WORST;
 	/** Glass body: a dark, slightly cool gradient drawn over the blurred world. */
-	private static final int GLASS_TOP = 0xB414141A;
-	private static final int GLASS_BOTTOM = 0x8C0A0A0F;
-	private static final int GLASS_BORDER = 0x2EFFFFFF;
-	private static final int GLASS_SHADOW = 0x66000000;
 	private static final float GLASS_SHADOW_SPREAD = 4.0f;
 
 	private final BooleanSetting ping = setting(new BooleanSetting("Ping",
@@ -166,19 +161,19 @@ public final class PingTpsElement extends HudModule {
 
 		if (this.tps.get()) {
 			RenderUtils.drawTextVCentered(context, tpsText(), right, y, PANEL_HEIGHT,
-					this.tpsPrimed ? tpsColor(this.shownTps) : TEXT_DIM, true, Align.RIGHT);
+					this.tpsPrimed ? tpsColor(this.shownTps) : Theme.textDim(), true, Align.RIGHT);
 			right -= tpsTextWidth();
 		}
 
 		if (bothShown()) {
 			RenderUtils.drawRoundedRect(context, right - GAP * 0.5f - DIVIDER_WIDTH * 0.5f,
-					y + (PANEL_HEIGHT - DIVIDER_HEIGHT) * 0.5f, DIVIDER_WIDTH, DIVIDER_HEIGHT, 0.5f, DIVIDER);
+					y + (PANEL_HEIGHT - DIVIDER_HEIGHT) * 0.5f, DIVIDER_WIDTH, DIVIDER_HEIGHT, 0.5f, Theme.sidebarDivider());
 			right -= GAP;
 		}
 
 		if (this.ping.get()) {
 			RenderUtils.drawTextVCentered(context, pingText(), right, y, PANEL_HEIGHT,
-					!this.pingPrimed ? TEXT_DIM : pingColor(this.shownPing), true, Align.RIGHT);
+					!this.pingPrimed ? Theme.textDim() : pingColor(this.shownPing), true, Align.RIGHT);
 		}
 	}
 
@@ -239,7 +234,7 @@ public final class PingTpsElement extends HudModule {
 	/** The shared Sakura glass material: gradient body, hairline border, drop shadow and an accent wash. */
 	private static void drawGlass(DrawContext context, float x, float y, float width, float height, float radius) {
 		RenderUtils.drawGlassPanel(context, x, y, width, height, radius,
-				GLASS_TOP, GLASS_BOTTOM, GLASS_BORDER, GLASS_SHADOW, GLASS_SHADOW_SPREAD);
+				Theme.glassTop(), Theme.glassBottom(), Theme.glassBorder(), Theme.glassShadow(), GLASS_SHADOW_SPREAD);
 		RenderUtils.drawAccentWash(context, x, y, width, height, radius, ConfigManager.get().accentColor, 1.0f);
 	}
 }

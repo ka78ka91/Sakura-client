@@ -1,5 +1,8 @@
 package com.sakura.client.gui.widget;
 
+
+import com.sakura.client.config.ConfigManager;
+import com.sakura.client.render.Theme;
 import com.sakura.client.render.Animations;
 import com.sakura.client.render.RenderUtils;
 import net.minecraft.client.gui.Click;
@@ -22,12 +25,6 @@ public class ToggleWidget implements GuiWidget {
 	/** E-folds per second, matching the feel of the 0.2-per-frame factor the widget used at 60 fps. */
 	private static final float ANIMATION_SPEED = 13.4f;
 	private static final float ANIMATION_EPSILON = 0.001f;
-
-	private static final int ON_COLOR = 0xFFA06EFF;
-	private static final int OFF_COLOR = 0x1AFFFFFF;
-	private static final int KNOB_COLOR = 0xFFFFFFFF;
-	private static final int OUTLINE = 0x14FFFFFF;
-
 	private final Animations.Clock clock = new Animations.Clock();
 
 	private boolean on;
@@ -83,15 +80,15 @@ public class ToggleWidget implements GuiWidget {
 		this.animation = Animations.approach(this.animation, target, ANIMATION_SPEED, this.clock.tick(),
 				ANIMATION_EPSILON);
 
-		RenderUtils.drawRoundedRect(context, x, y, WIDTH, HEIGHT, RADIUS, lerpColor(OFF_COLOR, ON_COLOR, this.animation));
-		RenderUtils.drawBorder(context, x, y, WIDTH, HEIGHT, RADIUS, 1.0f, OUTLINE);
+		RenderUtils.drawRoundedRect(context, x, y, WIDTH, HEIGHT, RADIUS, lerpColor(Theme.chipBg(), ConfigManager.get().accentColor, this.animation));
+		RenderUtils.drawBorder(context, x, y, WIDTH, HEIGHT, RADIUS, 1.0f, Theme.sidebarDivider());
 
 		float travel = WIDTH - 2.0f * KNOB_INSET - KNOB_RADIUS * 2.0f;
 		float knobCenterX = x + KNOB_INSET + KNOB_RADIUS + travel * this.animation;
 		float knobCenterY = y + HEIGHT / 2.0f;
 
 		RenderUtils.drawRoundedRect(context, knobCenterX - KNOB_RADIUS, knobCenterY - KNOB_RADIUS,
-				KNOB_RADIUS * 2.0f, KNOB_RADIUS * 2.0f, KNOB_RADIUS, KNOB_COLOR);
+				KNOB_RADIUS * 2.0f, KNOB_RADIUS * 2.0f, KNOB_RADIUS, Theme.text());
 	}
 
 	// -------------------------------------------------------------------- input

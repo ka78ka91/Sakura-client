@@ -1,5 +1,7 @@
 package com.sakura.client.hud.element;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.hud.HudAnchor;
 import com.sakura.client.hud.HudModule;
@@ -30,15 +32,9 @@ public class CoordinatesElement extends HudModule {
 	private static final float ACCENT_PILL_INSET = 4.0f;
 	/** How quickly the read-out catches up with the player, in e-folds per second. */
 	private static final float VALUE_SPEED = 12.0f;
-
-	private static final int TEXT = 0xFFFFFFFF;
 	private static final int ACCENT_PILL_ALPHA = 0xD9;
 
 	/** Glass body: a dark, slightly cool gradient drawn over the blurred world. */
-	private static final int GLASS_TOP = 0xB414141A;
-	private static final int GLASS_BOTTOM = 0x8C0A0A0F;
-	private static final int GLASS_BORDER = 0x2EFFFFFF;
-	private static final int GLASS_SHADOW = 0x66000000;
 	private static final float GLASS_SHADOW_SPREAD = 4.0f;
 
 	private final Animations.Clock clock = new Animations.Clock();
@@ -99,13 +95,13 @@ public class CoordinatesElement extends HudModule {
 		float room = PANEL_WIDTH - PADDING_X - ACCENT_PILL_INSET - ACCENT_PILL_WIDTH - 3.0f;
 
 		RenderUtils.drawTextVCentered(context, RenderUtils.trimToWidth(text, room), x + PANEL_WIDTH - PADDING_X,
-				y, PANEL_HEIGHT, TEXT, true, Align.RIGHT);
+				y, PANEL_HEIGHT, Theme.text(), true, Align.RIGHT);
 	}
 
 	/** The shared Sakura glass material: gradient body, hairline border, drop shadow and an accent wash. */
 	private static void drawGlass(DrawContext context, float x, float y, float width, float height, float radius) {
 		RenderUtils.drawGlassPanel(context, x, y, width, height, radius,
-				GLASS_TOP, GLASS_BOTTOM, GLASS_BORDER, GLASS_SHADOW, GLASS_SHADOW_SPREAD);
+				Theme.glassTop(), Theme.glassBottom(), Theme.glassBorder(), Theme.glassShadow(), GLASS_SHADOW_SPREAD);
 		RenderUtils.drawAccentWash(context, x, y, width, height, radius, ConfigManager.get().accentColor, 1.0f);
 	}
 }

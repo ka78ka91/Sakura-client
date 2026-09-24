@@ -1,5 +1,7 @@
 package com.sakura.client.gui.widget;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.render.RenderUtils;
 import com.sakura.client.render.RenderUtils.Align;
 import net.minecraft.client.gui.Click;
@@ -32,13 +34,6 @@ public class ColorPickerWidget implements GuiWidget {
 	private static final float MARKER_RADIUS = 4.0f;
 
 	private static final int WHEEL_BACKDROP = 0x59000000;
-	private static final int TRACK_BG = 0x1AFFFFFF;
-	private static final int TRACK_FILL = 0xFFFFFFFF;
-	private static final int KNOB = 0xFFFFFFFF;
-	private static final int MARKER = 0xFFFFFFFF;
-	private static final int HEX_BOX_BG = 0x4D000000;
-	private static final int HEX_BOX_TEXT = 0xFFCCCCCC;
-
 	private enum DragTarget {
 		NONE,
 		WHEEL,
@@ -195,28 +190,28 @@ public class ColorPickerWidget implements GuiWidget {
 		float markerY = centerY - (float) Math.cos(angle) * radius;
 
 		RenderUtils.drawBorder(context, markerX - MARKER_RADIUS, markerY - MARKER_RADIUS,
-				MARKER_RADIUS * 2.0f, MARKER_RADIUS * 2.0f, MARKER_RADIUS, 1.5f, MARKER);
+				MARKER_RADIUS * 2.0f, MARKER_RADIUS * 2.0f, MARKER_RADIUS, 1.5f, Theme.text());
 	}
 
 	private void drawTrack(DrawContext context, float trackX, float trackY, float value) {
-		RenderUtils.drawRoundedRect(context, trackX, trackY, TRACK_WIDTH, TRACK_HEIGHT, TRACK_RADIUS, TRACK_BG);
+		RenderUtils.drawRoundedRect(context, trackX, trackY, TRACK_WIDTH, TRACK_HEIGHT, TRACK_RADIUS, Theme.buttonBg());
 
 		float filled = TRACK_HEIGHT * value;
 		float top = trackY + TRACK_HEIGHT - filled;
-		RenderUtils.drawRoundedRect(context, trackX, top, TRACK_WIDTH, filled, TRACK_RADIUS, TRACK_FILL);
+		RenderUtils.drawRoundedRect(context, trackX, top, TRACK_WIDTH, filled, TRACK_RADIUS, Theme.text());
 
 		float knobCenterY = top;
 		RenderUtils.drawRoundedRect(context, trackX + TRACK_WIDTH / 2.0f - KNOB_RADIUS, knobCenterY - KNOB_RADIUS,
-				KNOB_RADIUS * 2.0f, KNOB_RADIUS * 2.0f, KNOB_RADIUS, KNOB);
+				KNOB_RADIUS * 2.0f, KNOB_RADIUS * 2.0f, KNOB_RADIUS, Theme.text());
 	}
 
 	private void drawHexBox(DrawContext context) {
 		String hex = getHex();
 		float boxWidth = RenderUtils.textWidth(hex) + 16.0f;
 
-		RenderUtils.drawRoundedRect(context, this.wheelX, this.hexBoxY, boxWidth, HEX_BOX_HEIGHT, 4.0f, HEX_BOX_BG);
+		RenderUtils.drawRoundedRect(context, this.wheelX, this.hexBoxY, boxWidth, HEX_BOX_HEIGHT, 4.0f, Theme.chipBg());
 		RenderUtils.drawTextVCentered(context, hex, this.wheelX + boxWidth / 2.0f, this.hexBoxY, HEX_BOX_HEIGHT,
-				HEX_BOX_TEXT, false, Align.CENTER);
+				Theme.textMuted(), false, Align.CENTER);
 	}
 
 	// -------------------------------------------------------------------- input

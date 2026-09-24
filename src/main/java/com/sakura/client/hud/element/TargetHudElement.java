@@ -1,5 +1,7 @@
 package com.sakura.client.hud.element;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.hud.HudAnchor;
 import com.sakura.client.hud.HudModule;
@@ -57,9 +59,6 @@ public final class TargetHudElement extends HudModule {
 	private static final float MARQUEE_SPEED = 22.0f;
 	private static final float MARQUEE_HOLD_MILLIS = 900.0f;
 	private static final long ACCENT_PULSE_MILLIS = 2600L;
-
-	private static final int NAME_COLOR = 0xFFFFFFFF;
-	private static final int DISTANCE_COLOR = 0xFF9A9AA2;
 	private static final int BAR_BG = 0x40FFFFFF;
 	private static final int BAR_HIGHLIGHT = 0x1FFFFFFF;
 	/** What a bar looks like over health that has just been taken off. */
@@ -71,10 +70,6 @@ public final class TargetHudElement extends HudModule {
 	private static final int HEALTH_BAD = 0xFFFF4D4D;
 
 	/** Glass body: a dark, slightly cool gradient drawn over the blurred world. */
-	private static final int GLASS_TOP = 0xB414141A;
-	private static final int GLASS_BOTTOM = 0x8C0A0A0F;
-	private static final int GLASS_BORDER = 0x2EFFFFFF;
-	private static final int GLASS_SHADOW = 0x66000000;
 	private static final float GLASS_SHADOW_SPREAD = 4.0f;
 
 	private final NumberSetting hold = setting(new NumberSetting("Hold",
@@ -302,9 +297,9 @@ public final class TargetHudElement extends HudModule {
 		int barColor = RenderUtils.mix(healthColor(this.shownHealth), FLASH_COLOR, this.flash * 0.75f);
 
 		RenderUtils.drawGlassPanel(context, x, y, PANEL_WIDTH, PANEL_HEIGHT, radius,
-				RenderUtils.multiplyAlpha(GLASS_TOP, alpha), RenderUtils.multiplyAlpha(GLASS_BOTTOM, alpha),
-				RenderUtils.multiplyAlpha(RenderUtils.mix(GLASS_BORDER, FLASH_BORDER, this.flash), alpha),
-				RenderUtils.multiplyAlpha(GLASS_SHADOW, alpha), GLASS_SHADOW_SPREAD);
+				RenderUtils.multiplyAlpha(Theme.glassTop(), alpha), RenderUtils.multiplyAlpha(Theme.glassBottom(), alpha),
+				RenderUtils.multiplyAlpha(RenderUtils.mix(Theme.glassBorder(), FLASH_BORDER, this.flash), alpha),
+				RenderUtils.multiplyAlpha(Theme.glassShadow(), alpha), GLASS_SHADOW_SPREAD);
 		RenderUtils.drawAccentWash(context, x, y, PANEL_WIDTH, PANEL_HEIGHT, radius,
 				ConfigManager.get().accentColor,
 				alpha * (0.85f + Animations.breathe(ACCENT_PULSE_MILLIS, 0.0f) * 0.30f));
@@ -317,11 +312,11 @@ public final class TargetHudElement extends HudModule {
 
 		if (this.showDistance.get()) {
 			RenderUtils.drawTextVCentered(context, this.shownDistance, right, y + TEXT_Y, TEXT_BOX,
-					RenderUtils.multiplyAlpha(DISTANCE_COLOR, alpha), true, Align.RIGHT);
+					RenderUtils.multiplyAlpha(Theme.textDim(), alpha), true, Align.RIGHT);
 		}
 
 		RenderUtils.drawMarqueeText(context, this.shownName, x + PADDING, textY, nameBoxWidth(),
-				this.marqueeOffset, RenderUtils.multiplyAlpha(NAME_COLOR, alpha), true);
+				this.marqueeOffset, RenderUtils.multiplyAlpha(Theme.text(), alpha), true);
 		RenderUtils.drawTextVCentered(context,
 				String.format(Locale.ROOT, "%.1f", this.shownHealth * this.shownMaxHealth), right,
 				y + BAR_TOP - (TEXT_BOX - BAR_HEIGHT) * 0.5f, TEXT_BOX,

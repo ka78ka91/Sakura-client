@@ -1,5 +1,7 @@
 package com.sakura.client.hud.element;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.hud.HudAnchor;
 import com.sakura.client.hud.HudModule;
@@ -46,9 +48,6 @@ public class KeystrokesElement extends HudModule {
 	private static final int KEY_GLASS_PRESSED_BOTTOM = 0xD9EEEFF6;
 
 	/** Glass body: a dark, slightly cool gradient drawn over the blurred world. */
-	private static final int GLASS_TOP = 0xB414141A;
-	private static final int GLASS_BOTTOM = 0x8C0A0A0F;
-	private static final int GLASS_SHADOW = 0x66000000;
 	private static final float GLASS_SHADOW_SPREAD = 2.5f;
 
 	private static final int KEY_FORWARD = 0;
@@ -164,10 +163,10 @@ public class KeystrokesElement extends HudModule {
 		int textColor = RenderUtils.mix(KEY_TEXT, KEY_TEXT_PRESSED, eased);
 
 		RenderUtils.drawGlassPanel(context, x, y, width, height, KEY_RADIUS,
-				RenderUtils.mix(GLASS_TOP, KEY_GLASS_PRESSED_TOP, eased),
-				RenderUtils.mix(GLASS_BOTTOM, KEY_GLASS_PRESSED_BOTTOM, eased),
+				RenderUtils.mix(Theme.glassTop(), KEY_GLASS_PRESSED_TOP, eased),
+				RenderUtils.mix(Theme.glassBottom(), KEY_GLASS_PRESSED_BOTTOM, eased),
 				RenderUtils.mix(KEY_BORDER, KEY_BORDER_PRESSED, eased),
-				RenderUtils.multiplyAlpha(GLASS_SHADOW, 1.0f - eased * 0.55f), GLASS_SHADOW_SPREAD);
+				RenderUtils.multiplyAlpha(Theme.glassShadow(), 1.0f - eased * 0.55f), GLASS_SHADOW_SPREAD);
 		RenderUtils.drawAccentWash(context, x, y, width, height, KEY_RADIUS,
 				ConfigManager.get().accentColor, 0.30f + eased * 0.70f);
 

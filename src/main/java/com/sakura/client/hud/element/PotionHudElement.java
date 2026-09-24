@@ -1,5 +1,7 @@
 package com.sakura.client.hud.element;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.hud.HudAnchor;
 import com.sakura.client.hud.HudModule;
@@ -46,17 +48,10 @@ public final class PotionHudElement extends HudModule {
 	private static final float ROW_IN_SPEED = 9.0f;
 	private static final float ROW_OUT_SPEED = 6.0f;
 	private static final float ROW_VISIBLE_EPSILON = 0.02f;
-
-	private static final int NAME_COLOR = 0xFFFFFFFF;
-	private static final int DURATION_COLOR = 0xFFB0B0B0;
 	private static final int ROW_BAR_TRACK = 0x33FFFFFF;
 	private static final String[] ROMAN = {"", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"};
 
 	/** Glass body: a dark, slightly cool gradient drawn over the blurred world. */
-	private static final int GLASS_TOP = 0xB414141A;
-	private static final int GLASS_BOTTOM = 0x8C0A0A0F;
-	private static final int GLASS_BORDER = 0x2EFFFFFF;
-	private static final int GLASS_SHADOW = 0x66000000;
 	private static final float GLASS_SHADOW_SPREAD = 4.0f;
 
 	private final BooleanSetting showDuration = setting(new BooleanSetting("Duration",
@@ -309,11 +304,11 @@ public final class PotionHudElement extends HudModule {
 				RenderUtils.multiplyAlpha(accent, rowAlpha));
 
 		RenderUtils.drawTextVCentered(context, label(effect), nameX, y, ROW_TEXT_HEIGHT,
-				RenderUtils.multiplyAlpha(NAME_COLOR, rowAlpha), true, Align.LEFT);
+				RenderUtils.multiplyAlpha(Theme.text(), rowAlpha), true, Align.LEFT);
 
 		if (this.showDuration.get()) {
 			RenderUtils.drawTextVCentered(context, duration(effect), right, y, ROW_TEXT_HEIGHT,
-					RenderUtils.multiplyAlpha(DURATION_COLOR, rowAlpha), true, Align.RIGHT);
+					RenderUtils.multiplyAlpha(Theme.textDim(), rowAlpha), true, Align.RIGHT);
 		}
 
 		RenderUtils.drawProgressBar(context, x + PADDING, y + ROW_HEIGHT - ROW_BAR_HEIGHT - 1.0f,
@@ -343,8 +338,8 @@ public final class PotionHudElement extends HudModule {
 	private static void drawGlass(DrawContext context, float x, float y, float width, float height,
 								  float radius, float alpha) {
 		RenderUtils.drawGlassPanel(context, x, y, width, height, radius,
-				RenderUtils.multiplyAlpha(GLASS_TOP, alpha), RenderUtils.multiplyAlpha(GLASS_BOTTOM, alpha),
-				RenderUtils.multiplyAlpha(GLASS_BORDER, alpha), RenderUtils.multiplyAlpha(GLASS_SHADOW, alpha),
+				RenderUtils.multiplyAlpha(Theme.glassTop(), alpha), RenderUtils.multiplyAlpha(Theme.glassBottom(), alpha),
+				RenderUtils.multiplyAlpha(Theme.glassBorder(), alpha), RenderUtils.multiplyAlpha(Theme.glassShadow(), alpha),
 				GLASS_SHADOW_SPREAD);
 		RenderUtils.drawAccentWash(context, x, y, width, height, radius,
 				ConfigManager.get().accentColor, alpha);

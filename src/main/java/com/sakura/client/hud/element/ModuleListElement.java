@@ -1,5 +1,7 @@
 package com.sakura.client.hud.element;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.hud.HudAnchor;
 import com.sakura.client.hud.HudModule;
@@ -43,15 +45,7 @@ public class ModuleListElement extends HudModule {
 	private static final float ROW_OUT_SPEED = 7.0f;
 	private static final float SLIDE_SPEED = 13.0f;
 	private static final float VISIBLE_EPSILON = 0.01f;
-
-	private static final int TEXT = 0xFFFFFFFF;
-	private static final int TEXT_DIM = 0xFFB0B0B0;
-
 	/** Glass body: a dark, slightly cool gradient drawn over the blurred world. */
-	private static final int GLASS_TOP = 0xB414141A;
-	private static final int GLASS_BOTTOM = 0x8C0A0A0F;
-	private static final int GLASS_BORDER = 0x2EFFFFFF;
-	private static final int GLASS_SHADOW = 0x66000000;
 	private static final float GLASS_SHADOW_SPREAD = 2.0f;
 
 	private final Animations.Clock clock = new Animations.Clock();
@@ -240,9 +234,9 @@ public class ModuleListElement extends HudModule {
 	private static void drawRow(DrawContext context, Row row, float x, float y, float width, float radius,
 								float alpha) {
 		RenderUtils.drawGlassPanel(context, x, y, width, ROW_HEIGHT, radius,
-				RenderUtils.multiplyAlpha(GLASS_TOP, alpha), RenderUtils.multiplyAlpha(GLASS_BOTTOM, alpha),
-				RenderUtils.multiplyAlpha(GLASS_BORDER, alpha),
-				RenderUtils.multiplyAlpha(GLASS_SHADOW, alpha * 0.7f), GLASS_SHADOW_SPREAD);
+				RenderUtils.multiplyAlpha(Theme.glassTop(), alpha), RenderUtils.multiplyAlpha(Theme.glassBottom(), alpha),
+				RenderUtils.multiplyAlpha(Theme.glassBorder(), alpha),
+				RenderUtils.multiplyAlpha(Theme.glassShadow(), alpha * 0.7f), GLASS_SHADOW_SPREAD);
 		RenderUtils.drawAccentWash(context, x, y, width, ROW_HEIGHT, radius,
 				ConfigManager.get().accentColor, alpha * 0.8f);
 
@@ -253,7 +247,7 @@ public class ModuleListElement extends HudModule {
 		String suffix = row.module.getHudSuffix();
 		float textX = x + width - PADDING_X;
 		float textY = y + (ROW_HEIGHT - RenderUtils.fontHeight()) / 2.0f + 1.0f;
-		int nameColor = RenderUtils.multiplyAlpha(TEXT, alpha);
+		int nameColor = RenderUtils.multiplyAlpha(Theme.text(), alpha);
 
 		if (suffix == null) {
 			RenderUtils.drawText(context, row.module.getName(), textX, textY, nameColor, true, Align.RIGHT);
@@ -265,7 +259,7 @@ public class ModuleListElement extends HudModule {
 		RenderUtils.drawText(context, row.module.getName(), textX - suffixWidth, textY,
 				nameColor, true, Align.RIGHT);
 		RenderUtils.drawText(context, suffix, textX, textY,
-				RenderUtils.multiplyAlpha(TEXT_DIM, alpha), true, Align.RIGHT);
+				RenderUtils.multiplyAlpha(Theme.textDim(), alpha), true, Align.RIGHT);
 	}
 
 	private static float rowWidth(Module module) {

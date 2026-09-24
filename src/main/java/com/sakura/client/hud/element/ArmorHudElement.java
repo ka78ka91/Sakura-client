@@ -1,5 +1,7 @@
 package com.sakura.client.hud.element;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.hud.HudAnchor;
 import com.sakura.client.hud.HudModule;
@@ -53,10 +55,6 @@ public final class ArmorHudElement extends HudModule {
 	private static final int DURABILITY_CRITICAL = 0xFFFF4D4D;
 
 	/** Glass body: a dark, slightly cool gradient drawn over the blurred world. */
-	private static final int GLASS_TOP = 0xB414141A;
-	private static final int GLASS_BOTTOM = 0x8C0A0A0F;
-	private static final int GLASS_BORDER = 0x2EFFFFFF;
-	private static final int GLASS_SHADOW = 0x66000000;
 	private static final float GLASS_SHADOW_SPREAD = 4.0f;
 	/** Recess behind each icon, only drawn while the glass panel is up. */
 	private static final int SLOT_RECESS = 0x12FFFFFF;
@@ -190,8 +188,8 @@ public final class ArmorHudElement extends HudModule {
 	private static void drawGlass(DrawContext context, float x, float y, float width, float height,
 								  float radius, float alpha) {
 		RenderUtils.drawGlassPanel(context, x, y, width, height, radius,
-				RenderUtils.multiplyAlpha(GLASS_TOP, alpha), RenderUtils.multiplyAlpha(GLASS_BOTTOM, alpha),
-				RenderUtils.multiplyAlpha(GLASS_BORDER, alpha), RenderUtils.multiplyAlpha(GLASS_SHADOW, alpha),
+				RenderUtils.multiplyAlpha(Theme.glassTop(), alpha), RenderUtils.multiplyAlpha(Theme.glassBottom(), alpha),
+				RenderUtils.multiplyAlpha(Theme.glassBorder(), alpha), RenderUtils.multiplyAlpha(Theme.glassShadow(), alpha),
 				GLASS_SHADOW_SPREAD);
 		RenderUtils.drawAccentWash(context, x, y, width, height, radius,
 				ConfigManager.get().accentColor, alpha);

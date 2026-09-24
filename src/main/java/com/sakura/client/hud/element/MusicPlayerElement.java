@@ -1,5 +1,7 @@
 package com.sakura.client.hud.element;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.config.ConfigManager;
 import com.sakura.client.hud.AlbumArt;
 import com.sakura.client.hud.HudAnchor;
@@ -55,13 +57,6 @@ public class MusicPlayerElement extends HudModule {
 	private static final float ART_RADIUS = 9.0f;
 
 	// ------------------------------------------------------------------ palette
-	private static final int TINT_TOP = 0xBD16111C;
-	private static final int TINT_BOTTOM = 0x9E0C0910;
-	private static final int BORDER = 0x26FFFFFF;
-	private static final int SHADOW = 0x5E000000;
-	private static final int TEXT = 0xFFFFFFFF;
-	private static final int TEXT_DIM = 0xFFA79FB8;
-	private static final int TEXT_FAINT = 0x8CFFFFFF;
 	private static final int TRACK = 0x30FFFFFF;
 	private static final int ART_PLACEHOLDER = 0x24FFFFFF;
 	private static final int BADGE_BG = 0xA6000000;
@@ -359,10 +354,10 @@ public class MusicPlayerElement extends HudModule {
 
 		// Body: shadow, gradient glass, accent bleed from the cover colour.
 		RenderUtils.drawGlassPanel(context, 0.0f, 0.0f, PANEL_WIDTH, PANEL_HEIGHT, radius,
-				RenderUtils.multiplyAlpha(TINT_TOP, this.alpha),
-				RenderUtils.multiplyAlpha(TINT_BOTTOM, this.alpha),
-				RenderUtils.multiplyAlpha(BORDER, this.alpha),
-				RenderUtils.multiplyAlpha(SHADOW, this.alpha), SHADOW_SPREAD);
+				RenderUtils.multiplyAlpha(Theme.glassTop(), this.alpha),
+				RenderUtils.multiplyAlpha(Theme.glassBottom(), this.alpha),
+				RenderUtils.multiplyAlpha(Theme.glassBorder(), this.alpha),
+				RenderUtils.multiplyAlpha(Theme.glassShadow(), this.alpha), SHADOW_SPREAD);
 		RenderUtils.drawAccentWash(context, 1.0f, 1.0f, PANEL_WIDTH - 2.0f, 20.0f, radius - 1.0f,
 				RenderUtils.withAlpha(this.accent, Math.round(70.0f * this.alpha)),
 				0.45f + 0.25f * Animations.breathe(4200L, 0.0f));
@@ -403,11 +398,11 @@ public class MusicPlayerElement extends HudModule {
 					RenderUtils.withAlpha(this.accent, Math.round(58.0f * this.alpha)),
 					RenderUtils.withAlpha(this.accent, Math.round(20.0f * this.alpha)), 12);
 			RenderUtils.drawText(context, "\u266A", x + ART_SIZE * 0.5f, y + ART_SIZE * 0.5f - 5.0f,
-					RenderUtils.withAlpha(TEXT, Math.round(150.0f * this.alpha)), false, Align.CENTER);
+					RenderUtils.withAlpha(Theme.text(), Math.round(150.0f * this.alpha)), false, Align.CENTER);
 		}
 
 		RenderUtils.drawBorder(context, x, y, ART_SIZE, ART_SIZE, ART_RADIUS, 1.0f,
-				RenderUtils.withAlpha(BORDER, Math.round(255.0f * this.alpha)));
+				RenderUtils.withAlpha(Theme.glassBorder(), Math.round(255.0f * this.alpha)));
 	}
 
 	private boolean drawCover(DrawContext context, float x, float y) {
@@ -432,11 +427,11 @@ public class MusicPlayerElement extends HudModule {
 		if (!hasTrack) {
 			title = available ? "Nothing playing" : "Media session unavailable";
 			subtitle = available ? "Start music in any player" : "Restart the game to retry";
-			titleColor = RenderUtils.withAlpha(TEXT_DIM, Math.round(255.0f * this.alpha));
+			titleColor = RenderUtils.withAlpha(Theme.textDim(), Math.round(255.0f * this.alpha));
 		} else {
 			title = provider.getTitle();
 			subtitle = this.artist.get() ? provider.getArtist() : null;
-			titleColor = RenderUtils.withAlpha(TEXT, Math.round(255.0f * this.alpha));
+			titleColor = RenderUtils.withAlpha(Theme.text(), Math.round(255.0f * this.alpha));
 		}
 
 		float titleWidth = TEXT_COLUMN - appWidth;
@@ -447,13 +442,13 @@ public class MusicPlayerElement extends HudModule {
 
 		if (app != null) {
 			RenderUtils.drawText(context, app, PANEL_WIDTH - PADDING, PADDING + 2.0f,
-					RenderUtils.withAlpha(TEXT_FAINT, Math.round(210.0f * this.alpha)), false, Align.RIGHT);
+					RenderUtils.withAlpha(Theme.textFaint(), Math.round(210.0f * this.alpha)), false, Align.RIGHT);
 		}
 
 		if (subtitle != null && !subtitle.isEmpty()) {
 			RenderUtils.drawText(context, RenderUtils.trimToWidth(subtitle, TEXT_COLUMN), textX,
 					PADDING + 14.0f,
-					RenderUtils.withAlpha(TEXT_DIM, Math.round(235.0f * this.alpha)), false);
+					RenderUtils.withAlpha(Theme.textDim(), Math.round(235.0f * this.alpha)), false);
 		}
 	}
 
@@ -480,7 +475,7 @@ public class MusicPlayerElement extends HudModule {
 
 		String times = formatTime(this.displayedMillis) + " / " + formatTime(duration);
 		RenderUtils.drawText(context, times, PANEL_WIDTH - PADDING, barY - 12.0f,
-				RenderUtils.withAlpha(TEXT_DIM, Math.round(215.0f * this.alpha)), false, Align.RIGHT);
+				RenderUtils.withAlpha(Theme.textDim(), Math.round(215.0f * this.alpha)), false, Align.RIGHT);
 
 		RenderUtils.drawProgressBar(context, textX, barY, TEXT_COLUMN, BAR_HEIGHT, fraction,
 				RenderUtils.multiplyAlpha(TRACK, this.alpha),
@@ -494,7 +489,7 @@ public class MusicPlayerElement extends HudModule {
 					RenderUtils.withAlpha(this.accent, Math.round(120.0f * this.alpha)));
 			RenderUtils.drawRoundedRect(context, headX - 1.5f, barY - 1.5f, 3.0f,
 					BAR_HEIGHT + 3.0f, 1.5f,
-					RenderUtils.withAlpha(TEXT, Math.round(240.0f * this.alpha)));
+					RenderUtils.withAlpha(Theme.text(), Math.round(240.0f * this.alpha)));
 		}
 	}
 
@@ -507,7 +502,7 @@ public class MusicPlayerElement extends HudModule {
 
 		RenderUtils.drawRoundedRect(context, x, y, size, size, 4.5f, background);
 
-		int colour = RenderUtils.withAlpha(TEXT, Math.round(245.0f * this.alpha));
+		int colour = RenderUtils.withAlpha(Theme.text(), Math.round(245.0f * this.alpha));
 		float centreY = y + size * 0.5f;
 
 		if (playing) {
@@ -546,7 +541,7 @@ public class MusicPlayerElement extends HudModule {
 
 		for (Control control : Control.values()) {
 			boolean pointed = control == this.pressed;
-			int colour = RenderUtils.withAlpha(TEXT, Math.round((pointed ? 255.0f : 225.0f) * eased * this.alpha));
+			int colour = RenderUtils.withAlpha(Theme.text(), Math.round((pointed ? 255.0f : 225.0f) * eased * this.alpha));
 
 			if (pointed) {
 				RenderUtils.drawRoundedRect(context, control.x - 1.0f, control.y - 1.0f,

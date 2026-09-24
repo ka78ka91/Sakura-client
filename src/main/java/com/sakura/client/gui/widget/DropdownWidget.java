@@ -1,5 +1,7 @@
 package com.sakura.client.gui.widget;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.render.Animations;
 import com.sakura.client.render.RenderUtils;
 import com.sakura.client.render.RenderUtils.Align;
@@ -24,18 +26,6 @@ public class DropdownWidget implements GuiWidget {
 	/** E-folds per second, matching the feel of the 0.25-per-frame factor the list used at 60 fps. */
 	private static final float ANIMATION_SPEED = 17.3f;
 	private static final float ANIMATION_EPSILON = 0.01f;
-
-	private static final int LABEL_COLOR = 0xFFFFFFFF;
-	private static final int VALUE_COLOR = 0xFFAAAAAA;
-	private static final int ARROW_COLOR = 0xFFAAAAAA;
-	private static final int LIST_BG = 0xE0141414;
-	private static final int LIST_BORDER = 0x1AFFFFFF;
-	private static final int OPTION_TEXT = 0xFFCCCCCC;
-	private static final int OPTION_TEXT_HOVER = 0xFFFFFFFF;
-	private static final int OPTION_TEXT_SELECTED = 0xFFFFFFFF;
-	private static final int OPTION_HOVER_BG = 0x20FFFFFF;
-	private static final int OPTION_SELECTED_BG = 0x33A06EFF;
-
 	private final String label;
 	private final String[] options;
 
@@ -104,10 +94,10 @@ public class DropdownWidget implements GuiWidget {
 		this.animation = Animations.approach(this.animation, target, ANIMATION_SPEED, this.clock.tick(),
 				ANIMATION_EPSILON);
 
-		RenderUtils.drawTextVCentered(context, this.label, x, y, ROW_HEIGHT, LABEL_COLOR, false, Align.LEFT);
+		RenderUtils.drawTextVCentered(context, this.label, x, y, ROW_HEIGHT, Theme.text(), false, Align.LEFT);
 		RenderUtils.drawTextVCentered(context, getValue(), x + width - ARROW_WIDTH - VALUE_GAP, y, ROW_HEIGHT,
-				VALUE_COLOR, false, Align.RIGHT);
-		RenderUtils.drawTextVCentered(context, "\u203A", x + width, y, ROW_HEIGHT, ARROW_COLOR, false, Align.RIGHT);
+				Theme.textDim(), false, Align.RIGHT);
+		RenderUtils.drawTextVCentered(context, "\u203A", x + width, y, ROW_HEIGHT, Theme.textDim(), false, Align.RIGHT);
 
 		if (this.animation > ANIMATION_EPSILON) {
 			drawOptions(context, mouseX, mouseY);
@@ -123,8 +113,8 @@ public class DropdownWidget implements GuiWidget {
 		// knows its local bounds.
 		com.sakura.client.render.LocalTransform.enableScissor(context, this.x, listTop, this.width, visibleHeight);
 
-		RenderUtils.drawRoundedRect(context, this.x, listTop, this.width, fullHeight, LIST_RADIUS, LIST_BG);
-		RenderUtils.drawBorder(context, this.x, listTop, this.width, fullHeight, LIST_RADIUS, 1.0f, LIST_BORDER);
+		RenderUtils.drawRoundedRect(context, this.x, listTop, this.width, fullHeight, LIST_RADIUS, Theme.windowBg());
+		RenderUtils.drawBorder(context, this.x, listTop, this.width, fullHeight, LIST_RADIUS, 1.0f, Theme.windowBorder());
 
 		for (int i = 0; i < this.options.length; i++) {
 			float optionY = listTop + LIST_PADDING + i * OPTION_HEIGHT;
@@ -132,13 +122,13 @@ public class DropdownWidget implements GuiWidget {
 
 			if (i == this.selected) {
 				RenderUtils.drawRoundedRect(context, this.x + 2.0f, optionY, this.width - 4.0f, OPTION_HEIGHT,
-						4.0f, OPTION_SELECTED_BG);
+						4.0f, Theme.accentAlpha(0x33));
 			} else if (hovered) {
 				RenderUtils.drawRoundedRect(context, this.x + 2.0f, optionY, this.width - 4.0f, OPTION_HEIGHT,
-						4.0f, OPTION_HOVER_BG);
+						4.0f, Theme.rowHover());
 			}
 
-			int color = (i == this.selected) ? OPTION_TEXT_SELECTED : (hovered ? OPTION_TEXT_HOVER : OPTION_TEXT);
+			int color = (i == this.selected) ? Theme.text() : (hovered ? Theme.text() : Theme.textMuted());
 			RenderUtils.drawTextVCentered(context, this.options[i], this.x + 12.0f, optionY, OPTION_HEIGHT,
 					color, false, Align.LEFT);
 		}

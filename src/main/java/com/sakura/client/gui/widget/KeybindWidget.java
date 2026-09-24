@@ -1,5 +1,7 @@
 package com.sakura.client.gui.widget;
 
+
+import com.sakura.client.render.Theme;
 import com.sakura.client.module.Module;
 import com.sakura.client.render.RenderUtils;
 import com.sakura.client.render.RenderUtils.Align;
@@ -21,14 +23,6 @@ public class KeybindWidget implements GuiWidget {
 	private static final float WIDTH = 64.0f;
 	private static final float HEIGHT = 18.0f;
 	private static final float RADIUS = 4.0f;
-
-	private static final int BG = 0x1AFFFFFF;
-	private static final int BG_HOVER = 0x26FFFFFF;
-	private static final int BG_LISTENING = 0x33A06EFF;
-	private static final int BORDER = 0x1AFFFFFF;
-	private static final int TEXT = 0xFFCCCCCC;
-	private static final int TEXT_LISTENING = 0xFFFFFFFF;
-
 	private int keyCode;
 	private boolean listening;
 
@@ -67,12 +61,12 @@ public class KeybindWidget implements GuiWidget {
 		this.y = y;
 
 		boolean hovered = contains(mouseX, mouseY);
-		int background = this.listening ? BG_LISTENING : (hovered ? BG_HOVER : BG);
+		int background = this.listening ? Theme.accentAlpha(0x33) : (hovered ? Theme.buttonBgHover() : Theme.buttonBg());
 
 		RenderUtils.drawRoundedRect(context, x, y, WIDTH, HEIGHT, RADIUS, background);
-		RenderUtils.drawBorder(context, x, y, WIDTH, HEIGHT, RADIUS, 1.0f, BORDER);
+		RenderUtils.drawBorder(context, x, y, WIDTH, HEIGHT, RADIUS, 1.0f, Theme.sidebarDivider());
 		RenderUtils.drawTextVCentered(context, getLabel(), x + WIDTH / 2.0f, y, HEIGHT,
-				this.listening ? TEXT_LISTENING : TEXT, false, Align.CENTER);
+				this.listening ? Theme.text() : Theme.textMuted(), false, Align.CENTER);
 	}
 
 	public String getLabel() {
