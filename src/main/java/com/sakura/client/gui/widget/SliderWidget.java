@@ -21,7 +21,6 @@ public class SliderWidget implements GuiWidget {
 	private static final float KNOB_RADIUS = 6.0f;
 	private static final float ROW_HEIGHT = 20.0f;
 	private static final float LABEL_GAP = 10.0f;
-	private static final float MIN_TRACK_WIDTH = 60.0f;
 	private static final float DEFAULT_TRACK_WIDTH = 160.0f;
 	private float value;
 	private boolean dragging;
@@ -65,17 +64,31 @@ public class SliderWidget implements GuiWidget {
 	/**
 	 * Draws one label/slider/value row and caches the track bounds for hit testing.
 	 *
+	 * <p>The row is laid out left to right — label, {@link #LABEL_GAP}, track, {@link #LABEL_GAP}, value —
+	 * so the track can never be pushed onto the caption. It used to be measured from the right only, which
+	 * left the caption width out of the calculation entirely: with a wide caption or a narrow row the track
+	 * started inside the text. The track is clamped to {@code [0, DEFAULT_TRACK_WIDTH]} and may fall below its
+	 * usual floor on a cramped row, because a short track is a much smaller problem than an unreadable
+	 * caption.</p>
+	 *
 	 * @param label     left-hand caption, may be {@code null}
 	 * @param valueText right-hand read-out such as {@code "16 px"}, may be {@code null}
 	 */
 	public void draw(DrawContext context, float x, float y, float width, String label, String valueText) {
 		this.rowY = y;
 
+		float labelWidth = label == null ? 0.0f : RenderUtils.textWidth(label);
 		float valueWidth = valueText == null ? 0.0f : RenderUtils.textWidth(valueText);
-		float reserved = valueWidth + (valueWidth > 0.0f ? LABEL_GAP : 0.0f);
-		float available = Math.max(MIN_TRACK_WIDTH, width - reserved);
-		this.trackWidth = Math.min(DEFAULT_TRACK_WIDTH, available);
-		this.trackX = x + width - valueWidth - (valueWidth > 0.0f ? LABEL_GAP : 0.0f) - this.trackWidth;
+
+		// One gap after the caption and one before the read-out; a side that draws nothing reserves nothing.
+		float leftInset = label == null ? 0.0f : labelWidth + LABEL_GAP;
+		float rightInset = valueWidth + (valueText == null ? 0.0f : LABEL_GAP);
+		float room = width - leftInset - rightInset;
+
+		this.trackWidth = Math.max(0.0f, Math.min(DEFAULT_TRACK_WIDTH, room));
+		// Centred in whatever is left over once both insets are taken, so a short track does not sit hard
+		// against the caption.
+		this.trackX = x + leftInset + Math.max(0.0f, room - this.trackWidth) / 2.0f;
 		this.trackY = y + (ROW_HEIGHT - TRACK_HEIGHT) / 2.0f + 1.0f;
 
 		if (label != null) {
@@ -84,6 +97,11 @@ public class SliderWidget implements GuiWidget {
 
 		if (valueText != null) {
 			RenderUtils.drawTextVCentered(context, valueText, x + width, y, ROW_HEIGHT, Theme.textDim(), false, Align.RIGHT);
+		}
+
+		if (this.trackWidth <= 0.0f) {
+			// No room for a track at all: the caption and the read-out are still worth drawing.
+			return;
 		}
 
 		RenderUtils.drawRoundedRect(context, this.trackX, this.trackY, this.trackWidth, TRACK_HEIGHT,

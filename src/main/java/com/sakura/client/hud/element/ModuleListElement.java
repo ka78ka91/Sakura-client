@@ -35,6 +35,15 @@ public class ModuleListElement extends HudModule {
 	private static final float ROW_GAP = 1.0f;
 	private static final float PADDING_X = 5.0f;
 	private static final float MARGIN = 4.0f;
+	/**
+	 * Horizontal breathing room between a row's name and its mode suffix.
+	 *
+	 * <p>The suffix is drawn in the dim text tier rather than as part of the same string, so the two runs need
+	 * explicit separation: the vanilla font's space advance is a single pixel, which reads as the name running
+	 * straight into its own suffix. Rows that are too narrow for the name at this gap lose the tail of the name
+	 * to an ellipsis instead of eating into the gap.</p>
+	 */
+	private static final float NAME_GAP = 6.0f;
 	/** Accent rail on every row, parked just right of the text. */
 	private static final float STRIPE_WIDTH = 2.0f;
 	private static final float STRIPE_INSET = 2.0f;
@@ -254,23 +263,40 @@ public class ModuleListElement extends HudModule {
 			return;
 		}
 
-		float suffixWidth = RenderUtils.textWidth(suffix) + RenderUtils.textWidth(" ");
+		// Same layout the width measurement uses, so the box the HUD editor hit-tests cannot disagree with the
+		// text that is actually drawn.
+		float suffixWidth = suffixWidth(suffix);
+		float nameRoom = rowNameWidth(suffix);
+		String name = RenderUtils.trimToWidth(row.module.getName(), nameRoom);
 
-		RenderUtils.drawText(context, row.module.getName(), textX - suffixWidth, textY,
-				nameColor, true, Align.RIGHT);
+		RenderUtils.drawText(context, name, textX - suffixWidth, textY, nameColor, true, Align.RIGHT);
 		RenderUtils.drawText(context, suffix, textX, textY,
 				RenderUtils.multiplyAlpha(themed(Theme.textDim()), alpha), true, Align.RIGHT);
 	}
 
+	/** @return the total width reserved for the suffix, including the {@link #NAME_GAP} before it */
+	private static float suffixWidth(String suffix) {
+		return NAME_GAP + RenderUtils.textWidth(suffix);
+	}
+
+	/** @return the horizontal space a row's name may occupy before it has to be trimmed */
+	private static float rowNameWidth(String suffix) {
+		return suffixWidth(suffix);
+	}
+
+	/** @return the width of everything in a row except the module's own name */
+	private static float rowFixedWidth(String suffix) {
+		return PADDING_X + suffixWidth(suffix);
+	}
+
 	private static float rowWidth(Module module) {
-		float width = RenderUtils.textWidth(module.getName());
 		String suffix = module.getHudSuffix();
 
-		if (suffix != null) {
-			width += RenderUtils.textWidth(" ") + RenderUtils.textWidth(suffix);
+		if (suffix == null) {
+			return PADDING_X * 2.0f + RenderUtils.textWidth(module.getName());
 		}
 
-		return width;
+		return rowFixedWidth(suffix) + RenderUtils.textWidth(module.getName());
 	}
 
 	/** One module's row, kept across frames so it can fade and slide in and out of the list. */

@@ -8,6 +8,8 @@ import com.sakura.client.render.RenderUtils.Align;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 
+import java.util.function.IntConsumer;
+
 /**
  * Single-line dropdown: {@code label ... current value ›.
  *
@@ -34,6 +36,7 @@ public class DropdownWidget implements GuiWidget {
 	private int selected;
 	private boolean expanded;
 	private float animation;
+	private IntConsumer onPick;
 
 	private float x;
 	private float y;
@@ -70,6 +73,21 @@ public class DropdownWidget implements GuiWidget {
 
 	public void setExpanded(boolean expanded) {
 		this.expanded = expanded;
+	}
+
+	/**
+	 * Registers a listener fired the moment an option is picked, <em>before</em> the click is released.
+	 *
+	 * <p>The owner has to apply the new value here rather than on release. A widget that mirrors a setting
+	 * resets its own index from that setting on every frame it is collapsed, so between the click and the
+	 * release the owner would read its own stale value back and silently undo the pick. Notifying at pick time
+	 * closes that window: by the next frame the setting already holds the new value and the mirror agrees with
+	 * it.</p>
+	 *
+	 * @param onPick receives the index of the picked option
+	 */
+	public void setOnPick(IntConsumer onPick) {
+		this.onPick = onPick;
 	}
 
 	/** Row height while collapsed, or row plus option list while expanded. */
@@ -156,6 +174,11 @@ public class DropdownWidget implements GuiWidget {
 			if (isOverOption(mouseX, mouseY, i)) {
 				this.selected = i;
 				this.expanded = false;
+
+				if (this.onPick != null) {
+					this.onPick.accept(i);
+				}
+
 				return true;
 			}
 		}

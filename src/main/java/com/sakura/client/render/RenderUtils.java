@@ -29,6 +29,25 @@ public final class RenderUtils {
 	private RenderUtils() {
 	}
 
+	/**
+	 * Upper bound on the number of rounded rectangles a soft shadow is built from.
+	 *
+	 * <p>See {@link #drawSoftShadow}: the layers are the most expensive thing the HUD draws, and past this
+	 * point they stop being visible.</p>
+	 */
+	private static final int MAX_SHADOW_LAYERS = 2;
+
+	/**
+	 * Horizontal bands the glass body gradient is built from.
+	 *
+	 * <p>Lower than the twenty the panel used to draw: each band is a full rounded rectangle, so the count is
+	 * the dominant cost of the material, and eight is still fine enough for the corner arcs.</p>
+	 */
+	private static final int GLASS_GRADIENT_BANDS = GradientDiagnostics.GLASS_GRADIENT_BANDS;
+
+	/** Band count used by {@code -Dsakura.debug.gradient=legacy}, matching the original algorithm. */
+	private static final int LEGACY_GLASS_GRADIENT_BANDS = 20;
+
 	// ------------------------------------------------------------------ font
 
 	/** The client's main {@link TextRenderer}, through {@link FontManager}. */
@@ -361,9 +380,14 @@ public final class RenderUtils {
 	 * Rounded rectangle filled with a vertical gradient.
 	 *
 	 * <p>Built from horizontal bands rather than one quad: each band's width is inset by the corner
-	 * circle at its own rows, so the shape keeps its rounded ends while the colour travels. With the
-	 * default band count the corner stepping is well under a pixel at the radii this UI uses, and the
-	 * whole call is a couple of dozen fills instead of one per row.</p>
+	 * circle at its own rows, so the shape keeps its rounded ends while the colour travels.</p>
+	 *
+	 * <p>Each band is filled with a plain {@link #drawRect}. {@code DrawContext.fillGradient} looks like the
+	 * cheaper choice — one GPU-interpolated quad instead of a flat fill — but it selects a different render
+	 * pipeline, and the GUI renderer merges elements into a batch only while the pipeline, texture and scissor
+	 * all match. Every gradient band therefore ends the running batch of ordinary fills, and with eight bands on
+	 * each of roughly twenty glass panels that is over a hundred batch breaks per frame. Measured on a full HUD
+	 * it cost more than the fills it saved, which is why the bands are flat fills again.</p>
 	 *
 	 * @param steps number of gradient bands, clamped to the pixel height
 	 */
@@ -422,25 +446,50 @@ public final class RenderUtils {
 	 * is the largest and faintest, and each layer inward both shrinks and strengthens. Stacking them makes
 	 * the alpha accumulate toward the panel, which reads as a penumbra rather than as rings.</p>
 	 *
+	 * <p>The stack is capped at {@link #MAX_SHADOW_LAYERS}. Each layer is a full rounded rectangle — a couple
+	 * of dozen quads — and a HUD with a dozen glass panels would otherwise spend thousands of them per frame on
+	 * shadow alone, which is the largest single cost in the HUD's draw path. Two layers is where the extra
+	 * layers stop being visible: a third and fourth only repeat, at low alpha, what the first two already
+	 * painted. The alpha curve is evaluated against the layer count actually drawn, so the two surviving
+	 * layers still run from faint at the edge to solid at the panel.</p>
+	 *
 	 * @param spread how far the shadow reaches, in GUI pixels
 	 */
 	public static void drawSoftShadow(DrawContext ctx, float x, float y, float width, float height,
 									  float radius, float spread, int argb) {
-		int layers = Math.max(1, Math.round(spread));
 		int baseAlpha = argb >>> 24;
 
 		if (baseAlpha == 0) {
 			return;
 		}
 
-		for (int layer = layers; layer >= 1; layer--) {
-			float grow = layer;
-			float falloff = 1.0f - layer / (float) layers;
-			int alpha = Math.round(baseAlpha * falloff * falloff * 0.6f);
+		if (GradientDiagnostics.LEGACY) {
+			// The uncapped stack, exactly as it was before the shadow was optimised: `spread` layers of
+			// decreasing size and increasing strength.
+			int legacyLayers = Math.max(1, Math.round(spread));
 
-			if (alpha <= 1) {
-				continue;
+			for (int layer = legacyLayers; layer >= 1; layer--) {
+				float falloff = 1.0f - layer / (float) legacyLayers;
+				int alpha = Math.round(baseAlpha * falloff * falloff * 0.6f);
+
+				if (alpha <= 1) {
+					continue;
+				}
+
+				drawRoundedRect(ctx, x - layer, y - layer, width + layer * 2.0f, height + layer * 2.0f,
+						radius + layer, withAlpha(argb, alpha));
 			}
+
+			return;
+		}
+
+		int layers = Math.max(1, Math.min(MAX_SHADOW_LAYERS, Math.round(spread)));
+		float step = spread / layers;
+
+		for (int layer = layers; layer >= 1; layer--) {
+			float grow = layer * step;
+			float falloff = 1.0f - layer / (float) layers;
+			int alpha = Math.max(1, Math.min(255, Math.round(baseAlpha * falloff * falloff * 0.6f)));
 
 			drawRoundedRect(ctx, x - grow, y - grow, width + grow * 2.0f, height + grow * 2.0f,
 					radius + grow, withAlpha(argb, alpha));
@@ -460,6 +509,11 @@ public final class RenderUtils {
 	 * it is provided by the screen itself (vanilla applies it once per frame from
 	 * {@code Screen.renderBackground}); this method supplies everything that sits on top of that blur.</p>
 	 *
+	 * <p>The body is a gradient over {@link #GLASS_GRADIENT_BANDS} bands, down from the twenty the panel used
+	 * to draw. Each band is a full rounded rectangle, so the band count is the dominant cost of the material and
+	 * the reduction is a straight saving; eight is still fine enough for the corner arcs to follow their curve
+	 * without visible steps.</p>
+	 *
 	 * @param tintTop      glass colour at the top edge, normally more opaque
 	 * @param tintBottom   glass colour at the bottom edge
 	 * @param borderArgb   hairline outline, usually a low-alpha white
@@ -477,7 +531,8 @@ public final class RenderUtils {
 			drawSoftShadow(ctx, x, y, width, height, radius, shadowSpread, shadowArgb);
 		}
 
-		drawRoundedGradient(ctx, x, y, width, height, radius, tintTop, tintBottom, 20);
+		int bands = GradientDiagnostics.LEGACY ? LEGACY_GLASS_GRADIENT_BANDS : GLASS_GRADIENT_BANDS;
+		drawRoundedGradient(ctx, x, y, width, height, radius, tintTop, tintBottom, bands);
 
 		// Sheen: the upper part of a glass pane catches more light than the lower part.
 		float sheen = Math.min(height * 0.42f, 24.0f);

@@ -11,11 +11,13 @@
 		"CriticalsNoGroundMixin",
 		"CriticalsTimerMixin",
 		"EntityTargetingMarginMixin",
+		"GameOptionsAccessor",
 		"MinecraftClientAccessor",
 		"MinecraftClientAttackMixin",
 		"PlayerEntityAccessor",
 		"PlayerEntityKeepSprintMixin",
 		"PlayerEntityReachMixin",
+		"SimpleOptionAccessor",
 		"VelocityPacketMixin"
 	],
 	"injectors": {

@@ -46,7 +46,19 @@ public final class ModuleSettingsPanel {
 
 	// ----------------------------------------------------------------- geometry
 	public static final float WIDTH = 236.0f;
-	private static final float HEADER_HEIGHT = 44.0f;
+	/**
+	 * Height of the panel header: a row for the module name, the divider, and a row for the caption beneath it.
+	 *
+	 * <p>Those three need to be separate bands. The name and the caption used to sit 16 local pixels apart with
+	 * nothing between them, which left barely a pixel of clear space once both text rows were centred — the
+	 * caption read as if it were printed over the name. The divider now marks the boundary explicitly, and the
+	 * header grew by the caption row's height to pay for it.</p>
+	 */
+	private static final float HEADER_HEIGHT = 54.0f;
+	/** Row the module name and the risk chip are centred in, starting at the panel's top edge. */
+	private static final float HEADER_TITLE_HEIGHT = 24.0f;
+	/** Row the caption is centred in, starting just below {@link #HEADER_HEIGHT} minus its own height. */
+	private static final float HEADER_CAPTION_HEIGHT = 21.0f;
 	private static final float PADDING = 12.0f;
 	private static final float ROW_GAP = 9.0f;
 	private static final float LABEL_LINE = 14.0f;
@@ -130,7 +142,8 @@ public final class ModuleSettingsPanel {
 		this.x = panelX;
 		this.y = panelY;
 		this.height = panelHeight;
-		this.closeButton = new Rect(panelX + WIDTH - 22.0f, panelY + 8.0f, 16.0f, 16.0f);
+		this.closeButton = new Rect(panelX + WIDTH - 22.0f,
+				panelY + (HEADER_TITLE_HEIGHT - 16.0f) / 2.0f, 16.0f, 16.0f);
 
 		this.rows.clear();
 
@@ -186,7 +199,11 @@ public final class ModuleSettingsPanel {
 		RenderUtils.drawRoundedRect(context, this.x, this.y, WIDTH, this.height, 10.0f, Theme.panelBg());
 		RenderUtils.drawBorder(context, this.x, this.y, WIDTH, this.height, 10.0f, 1.0f, Theme.panelBorder());
 
-		drawHeader(context, mouseX, mouseY);
+		// Resolved once per frame: it is needed by the header, the empty notice and the scroll extent, and it
+		// allocates a fresh list on every call.
+		List<Setting<?>> visible = this.module.getVisibleSettings();
+
+		drawHeader(context, mouseX, mouseY, visible);
 
 		this.contentTop = this.y + HEADER_HEIGHT + 8.0f;
 
@@ -207,7 +224,7 @@ public final class ModuleSettingsPanel {
 			renderRow(context, row.setting(), rowY, mouseX, mouseY);
 		}
 
-		if (this.module.getVisibleSettings().isEmpty()) {
+		if (visible.isEmpty()) {
 			RenderUtils.drawTextVCentered(context, "No parameters for this module yet.",
 					this.x + PADDING, this.contentTop + 6.0f, 16.0f, Theme.textFaint(), false, Align.LEFT);
 		}
@@ -219,28 +236,32 @@ public final class ModuleSettingsPanel {
 		drawScrollbar(context);
 	}
 
-	private void drawHeader(DrawContext context, float mouseX, float mouseY) {
+	private void drawHeader(DrawContext context, float mouseX, float mouseY, List<Setting<?>> visible) {
 		RenderUtils.drawRoundedRect(context, this.x + 1.0f, this.y + 1.0f, WIDTH - 2.0f, HEADER_HEIGHT - 1.0f,
 				9.0f, Theme.headerBg());
-		RenderUtils.drawTextVCentered(context, this.module.getName(), this.x + PADDING, this.y + 6.0f, 16.0f,
-				Theme.text(), false, Align.LEFT);
+
+		RenderUtils.drawTextVCentered(context, this.module.getName(), this.x + PADDING, this.y,
+				HEADER_TITLE_HEIGHT, Theme.text(), false, Align.LEFT);
 
 		Risk risk = this.module.getRisk();
 
 		if (risk != Risk.SAFE) {
-			// The chip follows the active settings, so it changes as the mode changes.
+			// The chip follows the active settings, so it changes as the mode changes. Vertically centred in
+			// the title row so it sits on the name's baseline rather than straddling two rows.
 			drawRiskChip(context, risk, this.x + PADDING + RenderUtils.textWidth(this.module.getName()) + 8.0f,
-					this.y + 8.0f);
+					this.y + (HEADER_TITLE_HEIGHT - CHIP_HEIGHT) / 2.0f);
 		}
+
+		float dividerY = this.y + HEADER_TITLE_HEIGHT;
+		RenderUtils.drawRect(context, this.x + 1.0f, dividerY, WIDTH - 2.0f, 1.0f, Theme.headerDivider());
+
 		RenderUtils.drawTextVCentered(context,
-				this.module.getCategory().getDisplayName() + "  -  "
-						+ this.module.getVisibleSettings().size() + " parameters",
-				this.x + PADDING, this.y + 22.0f, 12.0f, Theme.textDim(), false, Align.LEFT);
+				this.module.getCategory().getDisplayName() + "  -  " + visible.size() + " parameters",
+				this.x + PADDING, dividerY + 1.0f, HEADER_CAPTION_HEIGHT, Theme.textDim(), false, Align.LEFT);
 
 		boolean hovered = this.closeButton.contains(mouseX, mouseY);
 		RenderUtils.drawTextVCentered(context, "\u2715", this.closeButton.x() + this.closeButton.width() / 2.0f,
 				this.closeButton.y(), this.closeButton.height(), hovered ? Theme.text() : Theme.textDim(), false, Align.CENTER);
-		RenderUtils.drawRect(context, this.x + 1.0f, this.y + HEADER_HEIGHT, WIDTH - 2.0f, 1.0f, Theme.headerDivider());
 	}
 
 	private void renderRow(DrawContext context, Setting<?> setting, float rowY, float mouseX, float mouseY) {
@@ -669,8 +690,11 @@ public final class ModuleSettingsPanel {
 
 			DropdownWidget widget = new DropdownWidget("Mode", labels.toArray(new String[0]));
 			widget.setSelectedIndex(enumSetting.getValues().indexOf(enumSetting.get()));
-			return widget;
-		});
+			// Applied at pick time, not on release: the row renderer re-seeds the widget from the setting on
+			// every collapsed frame, so anything deferred past the next frame would be overwritten with the
+			// value the setting had before the click.
+			widget.setOnPick(index -> applyEnumSelection(enumSetting));
+			return widget;		});
 	}
 
 	private ColorPickerWidget picker(Setting<?> setting) {
