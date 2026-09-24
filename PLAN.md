@@ -161,19 +161,19 @@
 **Goal**：消除 HUD/ClickGUI 每帧重复计算与分配。
 
 **TodoList**：
-1. ModuleListElement：`syncRows()` 只在 render 内每帧首调一次；`getWidth()/getHeight()` 改读 `cachedWidth/cachedHeight` 字段（render 末尾回写；首次调用未缓存时 lazy sync 一次）。resolveX/resolveY 在渲染前由 HudManager 调用的场景读到的就是上一帧缓存，位置拖动反馈一帧内到位，无感知
-2. PotionHudElement：同方案，`refresh()` 每帧一次，宽高读缓存
-3. PingTpsElement：`pingOf` 结果每帧缓存一次（`cachedPing` 字段，render 开头取一次），pingText/pingTextWidth/render 内复用
-4. HudModule：不动公开 API；HudManager.render 已对每元素只调一次 resolveX/resolveY（各一次），宽高各调两次（isHovered 另算），元素侧缓存落地后此处自动受益
-5. ClickGuiScreen.layout：Rect/Row/GroupLabel 改可变对象 + 对象池（`rows` 复用 Row 实例、`Rect` 改为复用字段容器；`record Rect` 保留公开签名——内部池化用私有可变 `MutableRect implements` 同 contains 语义，绘制路径读池）；加 `layoutDirty` 标记：render 每帧仍 layout（窗口尺寸可变），但**输入处理器**（mouseClicked 等）只在 `layoutDirty` 时重算，输入路径不再无条件重建
-6. drawSection/button/moduleRow 内的 `new Rect` 随池化一并消除
+1. **【已决策，用户追加 1】Rect 不池化，保持 record 原样**。理由：`Rect` 是公开嵌套类型，record 的值语义（自动 equals/hashCode）是其契约一部分，改成普通类需要全仓走查且违背"不改公开 API"的精神；每帧 ~30 个 32 字节短命 record 属年轻代廉价分配，收益可忽略。池化只作用于 ClickGuiScreen **内部私有**的 Row / GroupLabel / Button：由 private record 转为私有可变类 + 实例池，改动完全封在 ClickGuiScreen.java 单文件内。drawSection / button / moduleRow 里的 `new Rect` 保留（数量小、不可变、生命周期被每帧 clear 的容器约束，无 aliasing 风险）
+2. ModuleListElement：`syncRows()` 只在 render 内每帧首调一次；`getWidth()/getHeight()` 改读 `cachedWidth/cachedHeight` 字段（render 末尾回写；首次调用未缓存时 lazy sync 一次）。resolveX/resolveY 在渲染前由 HudManager 调用的场景读到的就是上一帧缓存，位置拖动反馈一帧内到位，无感知
+3. PotionHudElement：同方案，`refresh()` 每帧一次，宽高读缓存
+4. PingTpsElement：`pingOf` 结果每帧缓存一次（`cachedPing` 字段，render 开头取一次），pingText/pingTextWidth/render 内复用
+5. ClickGuiScreen.layout 加 `layoutDirty` 标记：render 每帧仍 layout（窗口尺寸可变、页面切换需重算），但**输入处理器**（mouseClicked/mouseDragged/mouseReleased/mouseScrolled）不再无条件 layout()，仅布局已脏时重算——这是"每帧 new 几十个"的主要放大器
+6. Row / GroupLabel / Button 池化落地（见第 1 项）：rows / groupLabels / activeButtons 列表逐帧复用实例，字段重写；Button 持有的 action lambda 每帧仍新建（行为所需），Rect 字段照常分配
 7. 编译 → commit → push
 
 **涉及文件**：ModuleListElement、PotionHudElement、PingTpsElement、ClickGuiScreen、（HudManager 仅注释更新）
 
 **验证**：编译；代码走查确认每帧 syncRows/refresh/pingOf 各 ≤1 次；GUI 手感（拖动滑条、点击）无回归。
 
-**风险**：池化引入"本帧数据被下帧覆盖"类 bug——池只在 render 与其后的输入处理之间存活，输入读的是本帧池内容（render 先于输入），时序安全；comment 里写明该时序假设。Rect 是 record 且为 public（ClickGuiScreen 内嵌公开类型），不改签名、池化在内部完成。
+**风险**：Row/GroupLabel/Button 池化引入"本帧数据被下帧覆盖"类 bug——池只在 render 与其后的输入处理之间存活，输入读的是本帧池内容（render 先于输入），时序安全；comment 里写明该时序假设。Rect 保持 record 不动，公开 API 零变化。
 
 ---
 
@@ -187,8 +187,9 @@
 3. ClickGuiScreen / HudEditorScreen / 各 widget 的硬编码颜色常量改为读 Theme（常量删除，引用点替换——纯机械替换，逐文件过）
 4. HUD 元素的 GLASS_* 常量收编到 Theme（drawGlass 各元素私有方法改调 Theme 值）；保留各元素特有色（FPS 温度色、Ping 温度色、Potion 效果色）——这些是数据可视化色，不属于主题
 5. 新建 `render/FontManager.java`：持有独立 TextRenderer；`RenderUtils.font()` 改为 `FontManager.font()`（内部：启用自定义且加载成功→自定义，否则原版 fallback，不抛异常）；字体文件放 `ConfigPaths.getFontsDir()/`；SakuraConfig 加 `customFont`（boolean）。**字体 API 属高风险项**：1.21.11 注册自定义 TextRenderer 的路径（FontManager/TextHandler/TrueTypeLoader）若与预期不符，**停下来问用户**，不猜
-6. HUD 独立配置：HudModule 加可选外观 Setting（color / scale / 透明度 / 圆角），默认值 = "继承主题"（color 用 null/0 表示继承）；先改 FpsElement 做样板（结构最简单），编译验证 + GUI 确认后推广到其余 8 个元素；每元素预设 2~3 档（跟随主题 / 纯白 / 强调色）+ 手动微调
-7. 编译 → commit → push
+6. **HUD 独立配置基座**：HudModule 加可选外观 Setting（color / scale / 透明度 / 圆角），默认值 = "继承主题"（color 用 0 表示继承），不改任何现有公开方法签名
+7. **阶段 5a（流程节点，用户追加 2）**：HudModule 基座 + FpsElement 样板（结构最简单）→ 编译 → commit `[阶段 5a] HUD独立配置：FpsElement 样板` → push → 输出 5a 报告，**停下等用户进游戏确认效果**
+8. 收到用户「推广」指令后才进入 **阶段 5b**：按样板推广到其余 8 个 HUD 元素，每元素预设 2~3 档（跟随主题 / 纯白 / 强调色）+ 手动微调 → 编译 → commit `[阶段 5b] HUD独立配置推广到其余元素` → push → 输出阶段 5 完整报告
 
 **涉及文件**：Theme（新）、FontManager（新）、RenderUtils、SakuraConfig、ConfigManager、ClickGuiScreen、HudEditorScreen、6 个 widget、9 个 HUD 元素、HudModule
 
@@ -283,7 +284,7 @@
 | M1 低个性化基线 | 2 | 5 个高优 bug 修复；默认关 3 HUD；Reach +0.1；风险标签如实 |
 | M2 配置体系 | 3 | versions/<ver>/sakura/ 结构落地；旧配置自动迁移；损坏自愈；多档切换可用；GUI 记忆页面 |
 | M3 性能 | 4 | HUD 每帧重复计算清零；ClickGUI 输入路径零分配 |
-| M4 可定制 | 5 | 5 套主题即换即生效；字体可换可回退；HUD 每元素 2~3 预设 + 微调 |
+| M4 可定制 | 5（5a → 用户确认 → 5b） | 5 套主题即换即生效；字体可换可回退；FpsElement 样板（5a）经用户确认后推广到全部 HUD（5b），每元素 2~3 预设 + 微调 |
 | M5 安全层 | 6 | SafetyManager 预算生效；对数正态分布有 1000 采样数据支撑；Rotation 反应延迟 + 微抖 |
 | M6 收尾 | 7 | 死代码清零；tick 顺序归位；最终报告 + 全部推送 |
 
