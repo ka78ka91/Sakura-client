@@ -19,10 +19,13 @@ import com.sakura.client.module.Module;
 import com.sakura.client.module.ModuleManager;
 import com.sakura.client.module.impl.AimbotModule;
 import com.sakura.client.module.impl.AutoClickerModule;
+import com.sakura.client.module.impl.AutoRespawnModule;
+import com.sakura.client.module.impl.AutoToolModule;
 import com.sakura.client.module.impl.AutoTotemModule;
 import com.sakura.client.module.impl.AutoWeaponModule;
 import com.sakura.client.module.impl.CriticalsModule;
 import com.sakura.client.module.impl.EspModule;
+import com.sakura.client.module.impl.FastPlaceModule;
 import com.sakura.client.module.impl.FullbrightModule;
 import com.sakura.client.module.impl.HitboxModule;
 import com.sakura.client.module.impl.KeepSprintModule;
@@ -93,10 +96,13 @@ public class SakuraClient implements ClientModInitializer {
 		// Feature modules.
 		ModuleManager.register(new AimbotModule());
 		ModuleManager.register(new AutoClickerModule());
+		ModuleManager.register(new AutoRespawnModule());
 		ModuleManager.register(new AutoTotemModule());
+		ModuleManager.register(new AutoToolModule());
 		ModuleManager.register(new AutoWeaponModule());
 		ModuleManager.register(new CriticalsModule());
 		ModuleManager.register(new EspModule());
+		ModuleManager.register(new FastPlaceModule());
 		ModuleManager.register(new FullbrightModule());
 		ModuleManager.register(new HitboxModule());
 		ModuleManager.register(new KeepSprintModule());

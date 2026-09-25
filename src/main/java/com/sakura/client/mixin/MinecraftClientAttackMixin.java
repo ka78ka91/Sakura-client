@@ -1,9 +1,11 @@
 package com.sakura.client.mixin;
 
+import com.sakura.client.module.impl.AutoToolModule;
 import com.sakura.client.module.impl.AutoWeaponModule;
 import com.sakura.client.module.impl.NoMissCooldownModule;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.util.hit.BlockHitResult;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -30,6 +32,12 @@ public abstract class MinecraftClientAttackMixin {
 	@Inject(method = "doAttack()Z", at = @At("HEAD"), cancellable = true)
 	private void sakura$beforeAttack(CallbackInfoReturnable<Boolean> info) {
 		MinecraftClient client = (MinecraftClient) (Object) this;
+
+		// A block under the crosshair is about to be mined, so the tool is chosen before the breaking packet is
+		// built. The main-hand stack doAttack reads further down is read after this, so the switch is seen.
+		if (client.crosshairTarget instanceof BlockHitResult hit && client.world != null) {
+			AutoToolModule.beforeMine(client, hit);
+		}
 
 		AutoWeaponModule.beforeAttack(client);
 
