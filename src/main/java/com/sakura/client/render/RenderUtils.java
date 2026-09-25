@@ -92,24 +92,41 @@ public final class RenderUtils {
 	// ------------------------------------------------------------------ text
 
 	/**
+	 * Replaces text the client is about to draw, when a module asks for it.
+	 *
+	 * <p>The single place every HUD and world-overlay string passes through, which is what makes name protection
+	 * a one-line concern instead of an edit to every element. It deliberately does not touch {@code drawText}
+	 * calls made by vanilla screens, so chat, the tab list and the menus keep showing the real name.</p>
+	 */
+	private static String visible(String text) {
+		return DisplayText.apply(text);
+	}
+
+	/**
 	 * Draws {@code text} left-aligned at ({@code x}, {@code y}).
 	 *
 	 * @param argb   packed ARGB colour, alpha is honoured
 	 * @param shadow whether to draw the 1px drop shadow
 	 */
 	public static void drawText(DrawContext ctx, String text, float x, float y, int argb, boolean shadow) {
-		if (text == null || text.isEmpty()) {
+		String shown = visible(text);
+
+		if (shown == null || shown.isEmpty()) {
 			return;
 		}
-		ctx.drawText(font(), text, Math.round(x), Math.round(y), argb, shadow);
+
+		ctx.drawText(font(), shown, Math.round(x), Math.round(y), argb, shadow);
 	}
 
 	/** Draws {@code text} at ({@code x}, {@code y}), anchored horizontally by {@code align}. */
 	public static void drawText(DrawContext ctx, String text, float x, float y, int argb, boolean shadow, Align align) {
-		if (text == null || text.isEmpty()) {
+		String shown = visible(text);
+
+		if (shown == null || shown.isEmpty()) {
 			return;
 		}
-		drawText(ctx, text, anchorX(text, x, align), y, argb, shadow);
+
+		drawText(ctx, shown, anchorX(shown, x, align), y, argb, shadow);
 	}
 
 	/**
@@ -118,11 +135,14 @@ public final class RenderUtils {
 	 */
 	public static void drawTextVCentered(DrawContext ctx, String text, float x, float y, float height,
 										 int argb, boolean shadow, Align align) {
-		if (text == null || text.isEmpty()) {
+		String shown = visible(text);
+
+		if (shown == null || shown.isEmpty()) {
 			return;
 		}
+
 		float textY = y + (height - fontHeight()) / 2.0f + 1.0f;
-		drawText(ctx, text, anchorX(text, x, align), textY, argb, shadow);
+		drawText(ctx, shown, anchorX(shown, x, align), textY, argb, shadow);
 	}
 
 	private static float anchorX(String text, float x, Align align) {

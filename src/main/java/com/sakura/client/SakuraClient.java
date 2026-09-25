@@ -35,6 +35,7 @@ import com.sakura.client.module.impl.FullbrightModule;
 import com.sakura.client.module.impl.HitboxModule;
 import com.sakura.client.module.impl.KeepSprintModule;
 import com.sakura.client.module.impl.KillAuraModule;
+import com.sakura.client.module.impl.NameProtectModule;
 import com.sakura.client.module.impl.NameTagsModule;
 import com.sakura.client.module.impl.NoMissCooldownModule;
 import com.sakura.client.module.impl.NoSlowModule;
@@ -115,6 +116,7 @@ public class SakuraClient implements ClientModInitializer {
 		ModuleManager.register(new HitboxModule());
 		ModuleManager.register(new KeepSprintModule());
 		ModuleManager.register(new KillAuraModule());
+		ModuleManager.register(new NameProtectModule());
 		ModuleManager.register(new NameTagsModule());
 		ModuleManager.register(new NoMissCooldownModule());
 		ModuleManager.register(new NoSlowModule());
