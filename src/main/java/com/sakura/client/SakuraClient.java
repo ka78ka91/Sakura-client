@@ -21,7 +21,9 @@ import com.sakura.client.hud.element.WatermarkElement;
 import com.sakura.client.module.Module;
 import com.sakura.client.module.ModuleManager;
 import com.sakura.client.module.impl.AimbotModule;
+import com.sakura.client.module.impl.AntiAfkModule;
 import com.sakura.client.module.impl.AutoClickerModule;
+import com.sakura.client.module.impl.AutoReconnectModule;
 import com.sakura.client.module.impl.AutoRespawnModule;
 import com.sakura.client.module.impl.AutoToolModule;
 import com.sakura.client.module.impl.AutoTotemModule;
@@ -98,7 +100,9 @@ public class SakuraClient implements ClientModInitializer {
 
 		// Feature modules.
 		ModuleManager.register(new AimbotModule());
+		ModuleManager.register(new AntiAfkModule());
 		ModuleManager.register(new AutoClickerModule());
+		ModuleManager.register(new AutoReconnectModule());
 		ModuleManager.register(new AutoRespawnModule());
 		ModuleManager.register(new AutoTotemModule());
 		ModuleManager.register(new AutoToolModule());
