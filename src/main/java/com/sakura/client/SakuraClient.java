@@ -46,6 +46,7 @@ import com.sakura.client.module.impl.TracersModule;
 import com.sakura.client.module.impl.TriggerBotModule;
 import com.sakura.client.module.impl.VelocityModule;
 import com.sakura.client.notification.NotificationManager;
+import com.sakura.client.render.FontPack;
 import com.sakura.client.render.WorldOverlayRenderer;
 import com.sakura.client.render.WorldProjection;
 import com.sakura.client.rotation.RotationManager;
@@ -143,6 +144,11 @@ public class SakuraClient implements ClientModInitializer {
 		HudManager.register(new WatermarkElement());
 
 		HudRenderer.register();
+
+		// Builds the optional font resource pack from whatever the player left in config/sakura/font. Done here,
+		// while the client is starting, so the pack is on disk before the resource manager first reads the pack
+		// list.
+		FontPack.install();
 
 		// World overlays: the matrix capture feeds the projection the ESP, name tags and tracers draw with.
 		WorldProjection.register();
