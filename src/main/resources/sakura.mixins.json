@@ -6,7 +6,8 @@
 	"client": [
 		"ClientPlayNetworkHandlerMixin",
 		"ClientPlayerEntityNoSlowMixin",
-		"ClientPlayerEntityRotationMixin",
+				"ClientPlayerEntityRotationMixin",
+		"ClientPlayerEntitySafeWalkMixin",
 		"CriticalsAttackMixin",
 		"CriticalsBlinkMixin",
 		"CriticalsNoGroundMixin",

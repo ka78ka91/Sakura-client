@@ -184,47 +184,51 @@ public final class RenderUtils {
 		int bottom = Math.round(y + height);
 		int left = Math.round(x);
 		int right = Math.round(x + width);
+		int span = Math.max(0, bottom - top);
 
-		// The corner arcs only occupy the first and last `rows` rows; everything between them is the full
-		// rectangle. With a small radius on a short panel the two arcs overlap and there is no middle at all.
-		int arcTopEnd = Math.min(top + rows, bottom);
-		int arcBottomStart = Math.max(bottom - rows, arcTopEnd);
+		// The corner arcs occupy the first and last `rows` rows; everything between them is the full rectangle.
+		// `arc` is clamped so the two ends can never overlap, which matters on a short panel where the requested
+		// radius is larger than the height: there the whole shape is two arcs and there is no middle at all.
+		int arc = Math.min(rows, span / 2);
+		int arcTopEnd = top + arc;
+		int arcBottomStart = bottom - arc;
 
-		int[] inset = new int[rows];
+		// The inset of a row, measured inward from the outer row of its arc. The table always covers as many
+		// rows as the calling shape actually spans, so a lookup can never be out of range however the rounding
+		// above falls out.
+		int[] inset = new int[Math.max(1, arc)];
 
-		for (int row = 0; row < rows; row++) {
-			double dy = r - (row + 0.5);
+		for (int index = 0; index < inset.length; index++) {
+			double dy = r - (index + 0.5);
 			double halfChord = Math.sqrt(Math.max(0.0, (double) r * r - dy * dy));
-			inset[row] = (int) Math.round(r - halfChord);
+			inset[index] = (int) Math.round(Math.max(0.0, r - halfChord));
 		}
 
-		fillRoundedRows(ctx, left, right, top, bottom, arcTopEnd - top, arcBottomStart, inset, argb);
+		fillRoundedRows(ctx, left, right, top, bottom, arcTopEnd, arcBottomStart, inset, argb);
 	}
 
 	/**
-	 * Emits the merged spans for the rounded ends of a shape.
+	 * Emits the merged spans for the two rounded ends of a shape, plus the rectangle between them.
 	 *
-	 * @param arcTopEnd    first row that is no longer part of the top arc
-	 * @param arcBottomStart first row that is part of the bottom arc
-	 * @param inset        per-row inset on each side, index 0 being the outermost row of an arc
+	 * @param arcTopEnd       first row that is not part of the top arc
+	 * @param arcBottomStart  first row that is part of the bottom arc
+	 * @param inset           inset per arc row, index 0 being the row furthest from the middle
 	 */
 	private static void fillRoundedRows(DrawContext ctx, int left, int right, int top, int bottom,
 										int arcTopEnd, int arcBottomStart, int[] inset, int argb) {
 		int row = top;
 
-		// Top arc, walking inward.
+		// Top arc, walking inward from the shape's outer row.
 		while (row < arcTopEnd) {
-			int index = row - top;
+			int index = Math.min(inset.length - 1, row - top);
 			int value = inset[index];
-			int leftEdge = left + value;
-			int rightEdge = right - value;
 			int runEnd = row + 1;
 
-			while (runEnd < arcTopEnd && inset[runEnd - top] == value) {
+			while (runEnd < arcTopEnd && inset[Math.min(inset.length - 1, runEnd - top)] == value) {
 				runEnd++;
 			}
 
-			drawRect(ctx, leftEdge, row, rightEdge - leftEdge, runEnd - row, argb);
+			drawRect(ctx, left + value, row, right - left - value * 2.0f, runEnd - row, argb);
 			row = runEnd;
 		}
 
@@ -234,19 +238,17 @@ public final class RenderUtils {
 			row = arcBottomStart;
 		}
 
-		// Bottom arc, walking outward.
+		// Bottom arc, walking outward towards the shape's other outer row.
 		while (row < bottom) {
 			int index = Math.min(inset.length - 1, bottom - row - 1);
 			int value = inset[index];
-			int leftEdge = left + value;
-			int rightEdge = right - value;
 			int runEnd = row + 1;
 
 			while (runEnd < bottom && inset[Math.min(inset.length - 1, bottom - runEnd - 1)] == value) {
 				runEnd++;
 			}
 
-			drawRect(ctx, leftEdge, row, rightEdge - leftEdge, runEnd - row, argb);
+			drawRect(ctx, left + value, row, right - left - value * 2.0f, runEnd - row, argb);
 			row = runEnd;
 		}
 	}

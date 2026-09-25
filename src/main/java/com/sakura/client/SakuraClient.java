@@ -39,6 +39,7 @@ import com.sakura.client.module.impl.NameTagsModule;
 import com.sakura.client.module.impl.NoMissCooldownModule;
 import com.sakura.client.module.impl.NoSlowModule;
 import com.sakura.client.module.impl.ReachModule;
+import com.sakura.client.module.impl.SafeWalkModule;
 import com.sakura.client.module.impl.SprintModule;
 import com.sakura.client.module.impl.TracersModule;
 import com.sakura.client.module.impl.TriggerBotModule;
@@ -118,6 +119,7 @@ public class SakuraClient implements ClientModInitializer {
 		ModuleManager.register(new NoMissCooldownModule());
 		ModuleManager.register(new NoSlowModule());
 		ModuleManager.register(new ReachModule());
+		ModuleManager.register(new SafeWalkModule());
 		ModuleManager.register(new SprintModule());
 		ModuleManager.register(new TracersModule());
 		ModuleManager.register(new TriggerBotModule());
