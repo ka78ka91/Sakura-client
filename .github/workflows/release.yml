@@ -1,0 +1,47 @@
+name: Release
+
+# Tag a commit with a version like v1.0.0 and this builds the mod and publishes a GitHub release
+# with the remapped jar attached.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # gradle.properties in this repository points org.gradle.java.home at the author's local JDK, which does
+      # not exist on a runner. Setting the same property through GRADLE_OPTS wins over the file, so the build
+      # uses the toolchain installed above without the repository needing a CI-specific copy of that file.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        # -Pmod_version overrides the version in gradle.properties, which would otherwise keep the artifact
+        # named after whatever the last committed version was rather than after the tag being released.
+        run: >-
+          GRADLE_OPTS="-Dorg.gradle.java.home=$JAVA_HOME"
+          ./gradlew build --no-daemon -Pmod_version="${GITHUB_REF_NAME#v}"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/libs/*.jar
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

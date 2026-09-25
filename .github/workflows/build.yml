@@ -1,0 +1,40 @@
+name: Build
+
+# Compiles every push and pull request, so a commit that does not build is visible before it is tagged.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        # See release.yml: the repository's gradle.properties names a local JDK, and overriding that property
+        # from the environment is what lets the same file work on a runner.
+        run: GRADLE_OPTS="-Dorg.gradle.java.home=$JAVA_HOME" ./gradlew build --no-daemon
+
+      - name: Upload the mod jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: sakura-client
+          path: build/libs/*.jar
+          if-no-files-found: error
