@@ -14,7 +14,10 @@ import com.sakura.client.hud.element.ModuleListElement;
 import com.sakura.client.hud.element.MusicPlayerElement;
 import com.sakura.client.hud.element.PingTpsElement;
 import com.sakura.client.hud.element.PotionHudElement;
+import com.sakura.client.hud.element.ServerInfoElement;
+import com.sakura.client.hud.element.SessionTimerElement;
 import com.sakura.client.hud.element.TargetHudElement;
+import com.sakura.client.hud.element.WatermarkElement;
 import com.sakura.client.module.Module;
 import com.sakura.client.module.ModuleManager;
 import com.sakura.client.module.impl.AimbotModule;
@@ -127,6 +130,9 @@ public class SakuraClient implements ClientModInitializer {
 		HudManager.register(new ArmorHudElement());
 		HudManager.register(new PotionHudElement());
 		HudManager.register(new PingTpsElement());
+		HudManager.register(new ServerInfoElement());
+		HudManager.register(new SessionTimerElement());
+		HudManager.register(new WatermarkElement());
 
 		HudRenderer.register();
 
